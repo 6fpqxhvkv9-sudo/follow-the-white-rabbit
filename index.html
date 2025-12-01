@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Cony Terminal: Absolute Final Script (V5 - Final Functionality)</title>
+    <style>
+        /* === CSS: 기본 스타일 === */
+        body {
+            background-color: #0000AA; 
+            color: #FFFFFF;
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 18px; 
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
+            position: relative; 
+        }
+
+        #message-container {
+            width: 100%;
+            height: 90vh; 
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+        .line {
+            line-height: 1.5;
+            white-space: pre; 
+            opacity: 0; 
+            margin: 0;
+        }
+
+        /* === 토끼 이미지 (y/n 전 등장) === */
+        #rabbit-img {
+            content: url('rabbit.png'); 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            width: 100px; 
+            height: auto;
+            opacity: 0; 
+            z-index: 20; 
+            transition: opacity 0.5s ease-in-out; 
+            display: none; 
+        }
+        
+        /* === 볼드체 스타일 === */
+        .bold {
+            font-weight: bold;
+        }
+        
+        /* === Oh dear! 스타일: 글씨크기 동일, 볼드, 기울임 제거, 빛 효과 제거 === */
+        .rabbit-dialog {
+            font-size: 18px; 
+            font-weight: bold; 
+            font-style: normal; 
+            color: #FFFFFF;
+            text-shadow: none; 
+        }
+
+        /* === 커서 및 글리치 스타일 === */
+        .blinking-cursor {
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .glitch-cursor {
+            animation: glitch-blink 0.1s infinite step-end; 
+        }
+        @keyframes glitch-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body id="terminal">
+    <div id="rabbit-img"></div> 
+    <div id="message-container"></div>
+    
+    <script>
+        const messageContainer = document.getElementById('message-container');
+        const rabbitImg = document.getElementById('rabbit-img');
+        
+        const YOUTUBE_URL = "https://youtube.com/@conyca?si=t19YccJ7cFmYJE9X";
+
+        // 스크립트 배열: 모든 텍스트를 순서대로 나열
+        const script = [
+            { text: "Hello. I am ", type: 'normal', pause: 0, line: 'new' }, 
+            { text: "Dolores", type: 'bold', pause: 0, line: 'continue' },
+            { text: ". I am the administrator of this page.", type: 'normal', pause: 1500, line: 'continue' },
+            { text: "This place will soon heal and renew your body and mind.", type: 'normal', pause: 1500, line: 'new' }, 
+            
+            // Glitch Script (2단계 심화 혼란)
+            { text: "For a moment, escape all anxiety, pain, and emptiness, ", type: 'normal', pause: 2500, line: 'new' }, 
+            { text: "free your soul, and discover your true self...f981gh", type: 'glitch', pause: 0, line: 'continue', interrupt: true }, 
+            
+            // Oh dear! (볼드체)
+            { text: "Oh dear! Oh dear! I shall be too late!", type: 'rabbit', pause: 1500, line: 'new' }, 
+            
+            // 최종 대사 
+            { text: "Follow the white rabbit.", type: 'normal', pause: 0, line: 'new', final: true } 
+        ];
+        
+        let scriptIndex = 0;
+        let typingTimeout; 
+        const defaultSpeed = 50; 
+        const glitchSpeed = 20; 
+
+        // 메시지를 타이핑하는 핵심 함수
+        function typeLine(item, callback) {
+            let line;
+            
+            if (item.line === 'new') {
+                line = document.createElement('p');
+                line.classList.add('line');
+                if (item.type === 'rabbit') {
+                    line.classList.add('rabbit-dialog');
+                }
+                messageContainer.appendChild(line);
+                line.style.opacity = 1; 
+                messageContainer.scrollTop = messageContainer.scrollHeight;
+            } else {
+                line = messageContainer.lastElementChild;
+                if (!line) return callback();
+                const prevCursor = line.querySelector('.blinking-cursor') || line.querySelector('.glitch-cursor');
+                if (prevCursor) line.removeChild(prevCursor);
+            }
+            
+            let textToType = item.text;
+            let charIndex = 0;
+            let currentSpeed = item.type === 'glitch' ? glitchSpeed : defaultSpeed;
+            let glitch_triggered_1 = false; 
+            let glitch_triggered_2 = false; 
+            
+            const cursorSpan = document.createElement('span');
+            cursorSpan.classList.add('blinking-cursor');
+            cursorSpan.textContent = '_';
+            line.appendChild(cursorSpan);
+
+            function typeChar() {
+                // === 2단계 Glitch 트리거 체크 ===
+                if (item.type === 'glitch' && charIndex < textToType.length) {
+                    const currentString = textToType.substring(0, charIndex + 1);
+                    
+                    if (currentString.includes("free") && !glitch_triggered_1) {
+                        glitch_triggered_1 = true;
+                        cursorSpan.classList.add('glitch-cursor');
+                        cursorSpan.classList.remove('blinking-cursor');
+                        simulateTypingGlitch(line, cursorSpan, 6, () => {
+                            typeChar(); 
+                        });
+                        return;
+                    } 
+                    
+                    if (currentString.includes("your") && !glitch_triggered_2) {
+                        glitch_triggered_2 = true;
+                        cursorSpan.classList.add('glitch-cursor');
+                        cursorSpan.classList.remove('blinking-cursor');
+                        simulateTypingGlitch(line, cursorSpan, 8, () => { 
+                            typeChar(); 
+                        });
+                        return;
+                    }
+                }
+                
+                // === 타이핑 로직 ===
+                if (charIndex < textToType.length) {
+                    const char = textToType.charAt(charIndex);
+                    
+                    if (item.type === 'bold') {
+                        let boldSpan = line.querySelector('.bold');
+                        if (!boldSpan) {
+                            boldSpan = document.createElement('span');
+                            boldSpan.classList.add('bold');
+                            line.insertBefore(boldSpan, cursorSpan);
+                        }
+                        boldSpan.appendChild(document.createTextNode(char));
+                    } else {
+                        line.insertBefore(document.createTextNode(char), cursorSpan);
+                    }
+                    
+                    charIndex++;
+                    typingTimeout = setTimeout(typeChar, currentSpeed);
+
+                } else {
+                    // === 타이핑 완료 후 처리 ===
+                    clearTimeout(typingTimeout); 
+
+                    if (item.final) {
+                        handleFinalSequence(line, cursorSpan);
+                    } else {
+                        setTimeout(() => {
+                            line.removeChild(cursorSpan);
+                            callback(); 
+                        }, item.pause);
+                    }
+                }
+            }
+            typeChar();
+        }
+
+        // === ❗️ 오타/지우기 시뮬레이션 함수 ===
+        function simulateTypingGlitch(lineElement, cursorElement, maxGlitch, callback) {
+            const glitchChars = "~!@#$%^&0123456789";
+            let glitchCount = 0;
+            const glitchInterval = 50; 
+
+            function glitchStep() {
+                if (glitchCount < maxGlitch) {
+                    if (glitchCount % 2 === 0) {
+                        const randomChar = glitchChars.charAt(Math.floor(Math.random() * glitchChars.length));
+                        lineElement.insertBefore(document.createTextNode(randomChar), cursorElement);
+                    } else {
+                        const lastChild = lineElement.childNodes[lineElement.childNodes.length - 2];
+                        if (lastChild && lastChild !== cursorElement) { 
+                            lineElement.removeChild(lastChild);
+                        }
+                    }
+                    glitchCount++;
+                    setTimeout(glitchStep, glitchInterval);
+                } else {
+                    cursorElement.classList.remove('glitch-cursor');
+                    cursorElement.classList.add('blinking-cursor');
+                    callback(); 
+                }
+            }
+            glitchStep();
+        }
+
+        // === 🐰 최종 시퀀스 처리 (토끼 등장 및 y/n) ===
+        function handleFinalSequence(lineElement, cursorSpan) {
+            
+            // 1. 토끼 이미지 등장 및 클릭 이벤트 추가 (새 탭에서 YouTube 링크 열기)
+            rabbitImg.style.display = 'block';
+            rabbitImg.style.opacity = 1;
+            rabbitImg.style.cursor = 'pointer'; // 클릭 가능 시각화
+            rabbitImg.onclick = () => {
+                window.open(YOUTUBE_URL, '_blank');
+            };
+            
+            // 2. y/n 선택지 제시 (커서 뒤에 붙임)
+            const y_n_html = ' <span id="choice-y" style="cursor: pointer; margin-right: 20px;">y</span> / <span id="choice-n" style="cursor: pointer;">n</span>';
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = y_n_html;
+            
+            while (tempDiv.firstChild) {
+                lineElement.insertBefore(tempDiv.firstChild, cursorSpan);
+            }
+            
+            // 3. y 클릭 시 YouTube 이동 (토끼 소멸 제거)
+            document.getElementById('choice-y').addEventListener('click', (e) => {
+                const choiceLine = e.target.closest('.line');
+                
+                // y만 남기고 y/n과 커서 제거
+                const y_n_text = choiceLine.textContent;
+                const cleanedText = y_n_text.substring(0, y_n_text.lastIndexOf('y / n')) + 'y';
+                choiceLine.innerHTML = cleanedText;
+                
+                // 🔥 토끼 소멸 로직 제거 완료
+                
+                // 🔗 YouTube 링크로 이동
+                window.open(YOUTUBE_URL, '_blank');
+            });
+            
+            // 4. n 클릭 시 처리 (기존 로직 유지)
+            document.getElementById('choice-n').addEventListener('click', (e) => {
+                const choiceLine = e.target.closest('.line');
+                const y_n_text = choiceLine.textContent;
+                const cleanedText = y_n_text.substring(0, y_n_text.lastIndexOf('y / n')) + 'n';
+                choiceLine.innerHTML = cleanedText;
+            });
+        }
+
+
+        // === 🎬 스크립트 순차 실행 시작 ===
+        function runScript() {
+            if (scriptIndex < script.length) {
+                const item = script[scriptIndex];
+                scriptIndex++;
+                typeLine(item, runScript);
+            }
+        }
+
+        
+        document.addEventListener('DOMContentLoaded', runScript);
+    </script>
+</body>
+</html>
