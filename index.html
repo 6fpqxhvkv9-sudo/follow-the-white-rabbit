@@ -2,9 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Cony Terminal: Absolute Final Script (V5 - Final Functionality)</title>
+    <title>Cony Terminal</title>
     <style>
-        /* === CSS: 기본 스타일 === */
         body {
             background-color: #0000AA; 
             color: #FFFFFF;
@@ -14,102 +13,122 @@
             padding: 20px;
             height: 100vh;
             overflow: hidden;
-            position: relative; 
+            position: relative;
+            user-select: none;
         }
 
         #message-container {
             width: 100%;
-            height: 90vh; 
-            overflow: hidden;
             position: relative;
             z-index: 10;
         }
+
         .line {
             line-height: 1.5;
             white-space: pre; 
-            opacity: 0; 
             margin: 0;
         }
 
-        /* === 토끼 이미지 (y/n 전 등장) === */
-        #rabbit-img {
-            content: url('rabbit.png'); 
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); 
-            width: 100px; 
-            height: auto;
-            opacity: 0; 
-            z-index: 20; 
-            transition: opacity 0.5s ease-in-out; 
-            display: none; 
-        }
-        
-        /* === 볼드체 스타일 === */
         .bold {
             font-weight: bold;
         }
-        
-        /* === Oh dear! 스타일: 글씨크기 동일, 볼드, 기울임 제거, 빛 효과 제거 === */
+
         .rabbit-dialog {
-            font-size: 18px; 
             font-weight: bold; 
-            font-style: normal; 
-            color: #FFFFFF;
-            text-shadow: none; 
         }
 
-        /* === 커서 및 글리치 스타일 === */
         .blinking-cursor {
             animation: blink 0.7s infinite;
         }
+
         @keyframes blink {
             50% { opacity: 0; }
         }
+
         .glitch-cursor {
             animation: glitch-blink 0.1s infinite step-end; 
         }
+
         @keyframes glitch-blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.3; }
         }
+
+        /* 아이콘 스타일 */
+        .desktop-icon {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            z-index: 100;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .desktop-icon.selected {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .desktop-icon img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 8px;
+            pointer-events: none;
+        }
+
+        .desktop-icon span {
+            color: #FFFFFF;
+            font-size: 14px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            pointer-events: none;
+        }
     </style>
 </head>
 <body id="terminal">
-    <div id="rabbit-img"></div> 
     <div id="message-container"></div>
+
+    <!-- 아이콘들 -->
+    <div class="desktop-icon" id="icon-youtube" style="bottom: 120px; left: 40px;">
+        <img src="rabbit_youtube.png" alt="YouTube">
+        <span>YouTube</span>
+    </div>
+
+    <div class="desktop-icon" id="icon-54" style="bottom: 120px; left: 160px;">
+        <img src="Papers_54.png" alt="54">
+        <span>54</span>
+    </div>
     
     <script>
         const messageContainer = document.getElementById('message-container');
-        const rabbitImg = document.getElementById('rabbit-img');
         
         const YOUTUBE_URL = "https://youtube.com/@conyca?si=t19YccJ7cFmYJE9X";
+        const TIMELINE_URL = "https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html";
 
-        // 스크립트 배열: 모든 텍스트를 순서대로 나열
+        // 스크립트 배열 - pause 시간 대폭 줄임
         const script = [
             { text: "Hello. I am ", type: 'normal', pause: 0, line: 'new' }, 
             { text: "Dolores", type: 'bold', pause: 0, line: 'continue' },
-            { text: ". I am the administrator of this page.", type: 'normal', pause: 1500, line: 'continue' },
-            { text: "This place will soon heal and renew your body and mind.", type: 'normal', pause: 1500, line: 'new' }, 
-            
-            // Glitch Script (2단계 심화 혼란)
-            { text: "For a moment, escape all anxiety, pain, and emptiness, ", type: 'normal', pause: 2500, line: 'new' }, 
+            { text: ". I am the administrator of this page.", type: 'normal', pause: 300, line: 'continue' },
+            { text: "This place will soon heal and renew your body and mind.", type: 'normal', pause: 300, line: 'new' }, 
+            { text: "For a moment, escape all anxiety, pain, and emptiness, ", type: 'normal', pause: 500, line: 'new' }, 
             { text: "free your soul, and discover your true self...f981gh", type: 'glitch', pause: 0, line: 'continue', interrupt: true }, 
-            
-            // Oh dear! (볼드체)
-            { text: "Oh dear! Oh dear! I shall be too late!", type: 'rabbit', pause: 1500, line: 'new' }, 
-            
-            // 최종 대사 
+            { text: "Oh dear! Oh dear! I shall be too late!", type: 'rabbit', pause: 300, line: 'new' }, 
             { text: "Follow the white rabbit.", type: 'normal', pause: 0, line: 'new', final: true } 
         ];
         
         let scriptIndex = 0;
         let typingTimeout; 
-        const defaultSpeed = 50; 
-        const glitchSpeed = 20; 
+        const defaultSpeed = 25;  // 더 빠르게
+        const glitchSpeed = 15; 
 
-        // 메시지를 타이핑하는 핵심 함수
         function typeLine(item, callback) {
             let line;
             
@@ -120,7 +139,6 @@
                     line.classList.add('rabbit-dialog');
                 }
                 messageContainer.appendChild(line);
-                line.style.opacity = 1; 
                 messageContainer.scrollTop = messageContainer.scrollHeight;
             } else {
                 line = messageContainer.lastElementChild;
@@ -141,7 +159,6 @@
             line.appendChild(cursorSpan);
 
             function typeChar() {
-                // === 2단계 Glitch 트리거 체크 ===
                 if (item.type === 'glitch' && charIndex < textToType.length) {
                     const currentString = textToType.substring(0, charIndex + 1);
                     
@@ -149,7 +166,7 @@
                         glitch_triggered_1 = true;
                         cursorSpan.classList.add('glitch-cursor');
                         cursorSpan.classList.remove('blinking-cursor');
-                        simulateTypingGlitch(line, cursorSpan, 6, () => {
+                        simulateTypingGlitch(line, cursorSpan, 4, () => {
                             typeChar(); 
                         });
                         return;
@@ -159,14 +176,13 @@
                         glitch_triggered_2 = true;
                         cursorSpan.classList.add('glitch-cursor');
                         cursorSpan.classList.remove('blinking-cursor');
-                        simulateTypingGlitch(line, cursorSpan, 8, () => { 
+                        simulateTypingGlitch(line, cursorSpan, 4, () => { 
                             typeChar(); 
                         });
                         return;
                     }
                 }
                 
-                // === 타이핑 로직 ===
                 if (charIndex < textToType.length) {
                     const char = textToType.charAt(charIndex);
                     
@@ -186,7 +202,6 @@
                     typingTimeout = setTimeout(typeChar, currentSpeed);
 
                 } else {
-                    // === 타이핑 완료 후 처리 ===
                     clearTimeout(typingTimeout); 
 
                     if (item.final) {
@@ -202,11 +217,10 @@
             typeChar();
         }
 
-        // === ❗️ 오타/지우기 시뮬레이션 함수 ===
         function simulateTypingGlitch(lineElement, cursorElement, maxGlitch, callback) {
             const glitchChars = "~!@#$%^&0123456789";
             let glitchCount = 0;
-            const glitchInterval = 50; 
+            const glitchInterval = 30; 
 
             function glitchStep() {
                 if (glitchCount < maxGlitch) {
@@ -230,18 +244,7 @@
             glitchStep();
         }
 
-        // === 🐰 최종 시퀀스 처리 (토끼 등장 및 y/n) ===
         function handleFinalSequence(lineElement, cursorSpan) {
-            
-            // 1. 토끼 이미지 등장 및 클릭 이벤트 추가 (새 탭에서 YouTube 링크 열기)
-            rabbitImg.style.display = 'block';
-            rabbitImg.style.opacity = 1;
-            rabbitImg.style.cursor = 'pointer'; // 클릭 가능 시각화
-            rabbitImg.onclick = () => {
-                window.open(YOUTUBE_URL, '_blank');
-            };
-            
-            // 2. y/n 선택지 제시 (커서 뒤에 붙임)
             const y_n_html = ' <span id="choice-y" style="cursor: pointer; margin-right: 20px;">y</span> / <span id="choice-n" style="cursor: pointer;">n</span>';
             
             const tempDiv = document.createElement('div');
@@ -251,22 +254,10 @@
                 lineElement.insertBefore(tempDiv.firstChild, cursorSpan);
             }
             
-            // 3. y 클릭 시 YouTube 이동 (토끼 소멸 제거)
-            document.getElementById('choice-y').addEventListener('click', (e) => {
-                const choiceLine = e.target.closest('.line');
-                
-                // y만 남기고 y/n과 커서 제거
-                const y_n_text = choiceLine.textContent;
-                const cleanedText = y_n_text.substring(0, y_n_text.lastIndexOf('y / n')) + 'y';
-                choiceLine.innerHTML = cleanedText;
-                
-                // 🔥 토끼 소멸 로직 제거 완료
-                
-                // 🔗 YouTube 링크로 이동
+            document.getElementById('choice-y').addEventListener('click', () => {
                 window.open(YOUTUBE_URL, '_blank');
             });
             
-            // 4. n 클릭 시 처리 (기존 로직 유지)
             document.getElementById('choice-n').addEventListener('click', (e) => {
                 const choiceLine = e.target.closest('.line');
                 const y_n_text = choiceLine.textContent;
@@ -275,8 +266,6 @@
             });
         }
 
-
-        // === 🎬 스크립트 순차 실행 시작 ===
         function runScript() {
             if (scriptIndex < script.length) {
                 const item = script[scriptIndex];
@@ -285,7 +274,77 @@
             }
         }
 
+        // === 드래그 가능한 아이콘 ===
+        const icons = document.querySelectorAll('.desktop-icon');
         
+        icons.forEach(icon => {
+            let isDragging = false;
+            let hasMoved = false;
+            let offsetX, offsetY;
+            let startX, startY;
+
+            icon.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                hasMoved = false;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = icon.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                icon.classList.add('selected');
+                icon.style.zIndex = 1000;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const moveX = Math.abs(e.clientX - startX);
+                const moveY = Math.abs(e.clientY - startY);
+                
+                if (moveX > 5 || moveY > 5) {
+                    hasMoved = true;
+                }
+                
+                icon.style.left = (e.clientX - offsetX) + 'px';
+                icon.style.top = (e.clientY - offsetY) + 'px';
+                icon.style.bottom = 'auto';
+                icon.style.right = 'auto';
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    icon.style.zIndex = 100;
+                }
+            });
+
+            // 더블클릭 → 링크 열기
+            icon.addEventListener('dblclick', () => {
+                if (!hasMoved) {
+                    if (icon.id === 'icon-youtube') {
+                        window.open(YOUTUBE_URL, '_blank');
+                    } else if (icon.id === 'icon-54') {
+                        window.open(TIMELINE_URL, '_blank');
+                    }
+                }
+            });
+
+            // 클릭 시 선택 효과
+            icon.addEventListener('click', () => {
+                icons.forEach(i => i.classList.remove('selected'));
+                icon.classList.add('selected');
+            });
+        });
+
+        // 바탕화면 클릭 시 선택 해제
+        document.body.addEventListener('click', (e) => {
+            if (e.target === document.body || e.target === document.getElementById('terminal')) {
+                icons.forEach(i => i.classList.remove('selected'));
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', runScript);
     </script>
 </body>
