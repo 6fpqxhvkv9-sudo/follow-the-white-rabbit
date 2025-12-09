@@ -31,7 +31,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 24px;
+            padding: 20px 24px 10px;
         }
         .video-intro video {
             max-width: 280px;
@@ -40,7 +40,7 @@
             border-radius: 12px;
         }
         .video-intro.hero-video {
-            padding: 60px 24px 20px;
+            padding: 120px 24px 10px;
         }
         .video-intro.hero-video video {
             max-width: 200px;
@@ -153,7 +153,7 @@
             scroll-margin-top: 120px;
         }
 
-        .phase-title { text-align: center; padding: 40px 24px 60px; }
+        .phase-title { text-align: center; padding: 20px 24px 60px; }
         .phase-title h2 { font-size: 36px; font-weight: 700; border: none; padding: 0; margin: 0 0 12px 0; color: var(--text-primary); }
         .phase-title .phase-date { font-size: 15px; color: var(--text-tertiary); font-weight: 400; }
 
@@ -171,7 +171,14 @@
             min-height: 100vh;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
-            text-align: center; padding: 80px 24px; margin-top: 80px;
+            text-align: center; padding: 80px 24px; margin-top: 40px;
+        }
+        .ending-video {
+            margin-bottom: 20px;
+        }
+        .ending-video video {
+            max-width: 350px;
+            border-radius: 12px;
         }
         .ending-intro { font-size: 15px; color: var(--text-secondary); margin-bottom: 32px; max-width: 480px; line-height: 1.9; }
         .ending-intro strong { color: var(--text-primary); display: block; margin-bottom: 16px; font-size: 16px; }
@@ -180,12 +187,14 @@
         .ending-main {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 40px;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 900px;
             margin: 48px 0;
+            padding: 0 20px;
         }
         .ending-main video {
-            max-width: 120px;
+            max-width: 180px;
             border-radius: 8px;
         }
         .ending-center {
@@ -210,7 +219,8 @@
             .video-intro video { max-width: 180px; }
             .video-intro.hero-video video { max-width: 140px; }
             .ending-main { flex-direction: column; gap: 24px; }
-            .ending-main video { max-width: 100px; }
+            .ending-main video { max-width: 140px; }
+            .ending-video video { max-width: 250px; }
         }
     </style>
 </head>
@@ -224,7 +234,7 @@
 
     <section class="hero" id="hero">
         <h1 class="main-title">Follow the White Rabbit</h1>
-        <p class="subtitle">54 Days of Human-AI Interaction Log by Cony</p>
+        <p class="subtitle">54 Days of Human-AI Interaction Log by <span style="color: #3b82f6; font-weight: 500;">Cony</span></p>
         <div class="hero-timeline">
             <div class="timeline-bar">
                 <div class="timeline-gradient"></div>
@@ -600,8 +610,8 @@
     </main>
 
     <!-- Dolores Video -->
-    <section class="video-intro">
-        <video class="pingpong" muted playsinline>
+    <section class="video-intro" style="padding: 40px 24px 10px;">
+        <video class="pingpong" muted playsinline style="max-width: 350px;">
             <source src="red_girl.webm" type="video/webm">
         </video>
     </section>
@@ -635,7 +645,7 @@
         <div class="ending-footer">
             <a href="#hero">↑ Back to top</a>
             <br><br>
-            <a href="mailto:conyww@gmail.com">conyww@gmail.com</a>
+            <a href="/cdn-cgi/l/email-protection#05666a6b7c7272456268646c692b666a68"><span class="__cf_email__" data-cfemail="b9dad6d7c0cecef9ded4d8d0d597dad6d4">[email&#160;protected]</span></a>
             <br>
             <a href="https://x.com/cony6666666" target="_blank">x.com/cony6666666</a>
             <br><br>
@@ -643,7 +653,7 @@
         </div>
     </section>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         const events = [
             { pos: 2, id: "phase0", title: "Oct 17 — First Encounter..." },
             { pos: 44, id: "phase0", title: "Nov 24 — Agency Loss..." },
@@ -738,13 +748,4 @@
                     if (currentTime <= 0) {
                         clearInterval(reverseInterval);
                         v.currentTime = 0;
-                        v.play().catch(() => {});
-                    } else {
-                        v.currentTime = currentTime;
-                    }
-                }, 1000 / 30);
-            }
-        });
-    </script>
-</body>
-</html>
+    
