@@ -98,12 +98,12 @@
             object-fit: cover;
         }
 
-        /* 자막 영역 - 화면 가운데 */
+        /* 자막 영역 - 하단에 오버레이 */
         .subtitle-area {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            bottom: 40px;
+            left: 0;
+            right: 0;
             text-align: center;
             padding: 10px;
         }
@@ -333,11 +333,26 @@
             <img src="artistic_bio.png" alt="Artistic Bio">
             <span>Artistic Bio Loading...</span>
         </div>
+
+        <div class="desktop-icon" id="icon-terminal">
+            <img src="terminal_home.png" alt="Terminal">
+            <span>Terminal</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-contact">
+            <img src="contact.png" alt="Contact">
+            <span>Contact</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-claude">
+            <img src="claude.png" alt="Claude">
+            <span>Claude</span>
+        </div>
     </div>
 
     <!-- Footer -->
     <div class="credits">
-        <span style="color: #00FF00;">cony@terminal</span>:<span style="color: #6699FF;">~</span>$ <a href="https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html" target="_blank">54</a> · <a href="mailto:conyww@gmail.com">mail</a> · <a href="https://x.com/cony6666666" target="_blank">x</a> · <a href="https://claude.ai" target="_blank">claude</a>
+        © 2025 Cony
     </div>
     
     <script>
@@ -448,6 +463,12 @@
                     window.open(TIMELINE_URL, '_blank');
                 } else if (icon.id === 'icon-reverie' || icon.id === 'icon-aiexe' || icon.id === 'icon-bio') {
                     alert('Coming Soon...');
+                } else if (icon.id === 'icon-terminal') {
+                    window.open('https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/', '_blank');
+                } else if (icon.id === 'icon-contact') {
+                    window.location.href = 'mailto:conyww@gmail.com';
+                } else if (icon.id === 'icon-claude') {
+                    window.open('https://claude.ai', '_blank');
                 }
             });
         });
