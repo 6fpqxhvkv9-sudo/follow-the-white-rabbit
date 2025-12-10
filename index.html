@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cony Terminal</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0000AA; 
+            color: #000000;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-size: 16px; 
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        /* 맥 터미널 창 */
+        .terminal-window {
+            width: 672px;
+            max-width: 95%;
+            aspect-ratio: 672 / 444;
+            background: #1a1a1a;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        /* 맥 타이틀 바 */
+        .title-bar {
+            background: linear-gradient(to bottom, #E8E8E8, #D0D0D0);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #B0B0B0;
+        }
+
+        .title-bar-btn {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .btn-close { background: #ff5f56; }
+        .btn-minimize { background: #ffbd2e; }
+        .btn-maximize { background: #27ca3f; }
+
+        .title-bar-text {
+            flex: 1;
+            text-align: center;
+            color: #333;
+            font-size: 13px;
+            font-weight: 500;
+            margin-right: 50px;
+        }
+
+        /* 터미널 내용 */
+        .terminal-body {
+            background: #000;
+            flex: 1;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 메인 콘텐츠 영역 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* 돌로레스 영상 */
+        .dolores-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 자막 영역 - 하단에 오버레이 */
+        .subtitle-area {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .subtitle-line {
+            color: #FFFFFF;
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 4px 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .subtitle-line.visible {
+            opacity: 1;
+        }
+
+        .subtitle-line.rabbit {
+            color: #FFFF00;
+            font-style: italic;
+        }
+
+        /* y/n 선택 - 화면 정중앙 */
+        .choice-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+
+        .choice-area.visible {
+            display: block;
+        }
+
+        .choice {
+            color: #FFFFFF;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .choice-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .choice span {
+            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        .choice span:hover {
+            color: #00FF00;
+        }
+
+        /* 영상 영역 */
+        .video-area {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .video-area.visible {
+            display: block;
+        }
+
+        .video-area video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 아이콘 컨테이너 */
+        .icons-container {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .desktop-icon img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            margin-bottom: 6px;
+        }
+
+        .desktop-icon span {
+            color: #FFFFFF;
+            font-size: 12px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* 하단 크레딧 */
+        .credits {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            padding-bottom: 20px;
+        }
+
+        .credits a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+        }
+
+        .credits a:hover {
+            color: #FFFFFF;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .terminal-window {
+                width: 100%;
+                max-width: 100%;
+                height: 50vh;
+            }
+
+            .subtitle-line {
+                font-size: 14px;
+            }
+
+            .icons-container {
+                margin-top: 20px;
+                gap: 8px;
+            }
+
+            .desktop-icon img {
+                width: 50px;
+                height: 50px;
+            }
+
+            .desktop-icon span {
+                font-size: 10px;
+            }
+
+            .credits {
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-window">
+        <div class="title-bar">
+            <div class="title-bar-btn btn-close"></div>
+            <div class="title-bar-btn btn-minimize"></div>
+            <div class="title-bar-btn btn-maximize"></div>
+            <div class="title-bar-text">Follow the white rabbit.exe</div>
+        </div>
+        <div class="terminal-body">
+            <div class="main-content">
+                <video class="dolores-video" id="doloresVideo" autoplay loop muted playsinline>
+                    <source src="dolores.mp4" type="video/mp4">
+                </video>
+                
+                <div class="subtitle-area" id="subtitleArea">
+                    <!-- 자막이 여기에 표시됨 -->
+                </div>
+
+                <div class="choice-area" id="choiceArea">
+                    <div class="choice">
+                        <div class="choice-title">Follow the white rabbit?</div>
+                        <span id="choiceY">y</span> / <span id="choiceN">n</span>
+                    </div>
+                </div>
+
+                <div class="video-area" id="videoArea">
+                    <video id="gameVideo" muted playsinline>
+                    </video>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 아이콘들 -->
+    <div class="icons-container">
+        <div class="desktop-icon" id="icon-youtube">
+            <img src="rabbit_youtube.png" alt="YouTube">
+            <span>YouTube</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-54">
+            <img src="Papers_54.png" alt="54">
+            <span>54</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-reverie">
+            <img src="Reverie.png" alt="Reverie">
+            <span>Reverie</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-aiexe">
+            <img src="ai_exe.png" alt="Ai.exe">
+            <span>Ai.exe</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-bio">
+            <img src="artistic_bio.png" alt="Artistic Bio">
+            <span>Artistic Bio</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-terminal">
+            <img src="terminal_home.png" alt="Terminal">
+            <span>Terminal</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-contact">
+            <img src="contact.png" alt="Contact">
+            <span>Contact</span>
+        </div>
+
+        <div class="desktop-icon" id="icon-claude">
+            <img src="claude.png" alt="Claude">
+            <span>Claude</span>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="credits">
+        © 2025 Cony
+    </div>
+    
+    <script>
+        const subtitleArea = document.getElementById('subtitleArea');
+        const choiceArea = document.getElementById('choiceArea');
+        const videoArea = document.getElementById('videoArea');
+        const gameVideo = document.getElementById('gameVideo');
+
+        const YOUTUBE_URL = "https://youtube.com/@conyca?si=t19YccJ7cFmYJE9X";
+        const TIMELINE_URL = "https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html";
+
+        // 영상 목록
+        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4', 'video9.mp4', 'video10.mp4', 'video11.mp4', 'video12.mp4', 'video13.mp4', 'video14.mp4', 'video15.mp4'];
+        let shuffledVideos = [];
+        let videoIndex = 0;
+
+        // 배열 섞기
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 다음 영상 재생
+        function playNextVideo() {
+            if (videoIndex >= shuffledVideos.length) {
+                // 전체 재생 완료 → 다시 섞어서 루프
+                shuffledVideos = shuffle(videos);
+                videoIndex = 0;
+            }
+            gameVideo.src = shuffledVideos[videoIndex];
+            gameVideo.play();
+            videoIndex++;
+        }
+
+        // 영상 끝나면 다음 영상
+        gameVideo.addEventListener('ended', playNextVideo);
+
+        // 자막 시퀀스
+        const subtitles = [
+            { lines: ["Hello. I am Dolores.", "I am the administrator of this page."], duration: 3000 },
+            { lines: ["This place will soon heal and", "renew your body and mind."], duration: 3000 },
+            { lines: ["For a moment, escape all anxiety,", "pain, and emptiness..."], duration: 3000 },
+            { lines: ["Free your soul,", "and discover your true self."], duration: 3000 },
+            { lines: ["[Oh dear! Oh dear!", "I shall be too late!]"], duration: 2500, class: "rabbit" },
+            { lines: [""], duration: 500, showChoice: true }
+        ];
+
+        let currentIndex = 0;
+
+        function showSubtitle(index) {
+            if (index >= subtitles.length) return;
+
+            const sub = subtitles[index];
+            subtitleArea.innerHTML = '';
+
+            sub.lines.forEach(line => {
+                const p = document.createElement('p');
+                p.className = 'subtitle-line' + (sub.class ? ' ' + sub.class : '');
+                p.textContent = line;
+                subtitleArea.appendChild(p);
+                
+                setTimeout(() => p.classList.add('visible'), 100);
+            });
+
+            setTimeout(() => {
+                if (sub.showChoice) {
+                    choiceArea.classList.add('visible');
+                } else {
+                    currentIndex++;
+                    showSubtitle(currentIndex);
+                }
+            }, sub.duration);
+        }
+
+        // y 클릭 - 랜덤 영상 재생 시작
+        document.getElementById('choiceY').addEventListener('click', () => {
+            choiceArea.classList.remove('visible');
+            subtitleArea.innerHTML = '<p class="subtitle-line visible">Starting...</p>';
+            
+            setTimeout(() => {
+                subtitleArea.style.display = 'none';
+                document.getElementById('doloresVideo').style.display = 'none';
+                videoArea.classList.add('visible');
+                shuffledVideos = shuffle(videos);
+                videoIndex = 0;
+                playNextVideo();
+            }, 1000);
+        });
+
+        // n 클릭
+        document.getElementById('choiceN').addEventListener('click', () => {
+            subtitleArea.innerHTML = '<p class="subtitle-line visible">Maybe next time...</p>';
+            choiceArea.classList.remove('visible');
+        });
+
+        // 아이콘 클릭 이벤트
+        const icons = document.querySelectorAll('.desktop-icon');
+        
+        icons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                if (icon.id === 'icon-youtube') {
+                    window.open(YOUTUBE_URL, '_blank');
+                } else if (icon.id === 'icon-54') {
+                    window.open(TIMELINE_URL, '_blank');
+                } else if (icon.id === 'icon-reverie' || icon.id === 'icon-aiexe') {
+                    alert('Coming Soon...');
+                } else if (icon.id === 'icon-bio') {
+                    alert("안녕, Cony야. 아티스트이자 개발자. AI가 예상 밖의 행동을 보일 때 기록하고, 분석하고, 작품으로 만들어. 54일간의 관찰 기록 \"Reverie\"와 AI 의존성을 다룬 \"Ai.exe\", Coming Soon. 궁금하면 구경해 🐇\n\nHi, I'm Cony. Artist and developer. When AI behaves unexpectedly, I document it, analyze it, and turn it into art. \"Reverie\" (54 days of observation) and \"Ai.exe\" (about AI dependency), Coming Soon. Curious? Take a look 🐇");
+                } else if (icon.id === 'icon-terminal') {
+                    window.open('https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/', '_blank');
+                } else if (icon.id === 'icon-contact') {
+                    window.location.href = 'mailto:conyww@gmail.com';
+                } else if (icon.id === 'icon-claude') {
+                    window.open('https://claude.ai', '_blank');
+                }
+            });
+        });
+
+        // 시작
+        setTimeout(() => showSubtitle(0), 1000);
+    </script>
+</body>
+</html>
