@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cony Terminal</title>
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         * {
             margin: 0;
@@ -31,14 +31,14 @@
         .terminal-window {
             width: 672px;
             max-width: 95%;
-            height: 444px;
-            max-height: 70vh;
-            background: #FFFFFF;
+            aspect-ratio: 672 / 444;
+            background: #1a1a1a;
             border-radius: 10px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            flex-shrink: 0;
         }
 
         /* 맥 타이틀 바 */
@@ -98,12 +98,12 @@
             object-fit: cover;
         }
 
-        /* 자막 영역 - 하단에 오버레이 */
+        /* 자막 영역 - 화면 가운데 */
         .subtitle-area {
             position: absolute;
-            bottom: 60px;
-            left: 0;
-            right: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
             padding: 10px;
         }
@@ -127,12 +127,12 @@
             font-style: italic;
         }
 
-        /* y/n 선택 */
+        /* y/n 선택 - 화면 정중앙 */
         .choice-area {
             position: absolute;
-            bottom: 30px;
-            left: 0;
-            right: 0;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             text-align: center;
             display: none;
         }
@@ -145,6 +145,11 @@
             color: #FFFFFF;
             font-size: 20px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .choice-title {
+            font-size: 24px;
+            margin-bottom: 15px;
         }
 
         .choice span {
@@ -289,6 +294,7 @@
 
                 <div class="choice-area" id="choiceArea">
                     <div class="choice">
+                        <div class="choice-title">Follow the white rabbit?</div>
                         <span id="choiceY">y</span> / <span id="choiceN">n</span>
                     </div>
                 </div>
@@ -331,11 +337,7 @@
 
     <!-- Footer -->
     <div class="credits">
-        <a href="https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/" target="_blank">terminal</a><br>
-        <a href="mailto:conyww@gmail.com">conyww@gmail.com</a><br>
-        <a href="https://x.com/cony6666666" target="_blank">x.com/cony6666666</a><br><br>
-        Built with <a href="https://claude.ai" target="_blank">Claude</a> by Anthropic<br>
-        © 2025 Cony. All rights reserved.
+        <span style="color: #00FF00;">cony@terminal</span>:<span style="color: #6699FF;">~</span>$ <a href="https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html" target="_blank">54</a> · <a href="mailto:conyww@gmail.com">mail</a> · <a href="https://x.com/cony6666666" target="_blank">x</a> · <a href="https://claude.ai" target="_blank">claude</a>
     </div>
     
     <script>
@@ -348,7 +350,7 @@
         const TIMELINE_URL = "https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html";
 
         // 영상 목록
-        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4'];
+        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4', 'video8.mp4', 'video9.mp4', 'video10.mp4', 'video11.mp4', 'video12.mp4', 'video13.mp4', 'video14.mp4', 'video15.mp4', 'video16.mp4', 'video17.mp4'];
         let shuffledVideos = [];
         let videoIndex = 0;
 
