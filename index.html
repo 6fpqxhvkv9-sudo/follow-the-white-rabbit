@@ -43,7 +43,7 @@
         /* 맥 타이틀 바 */
         .title-bar {
             background: linear-gradient(to bottom, #E8E8E8, #D0D0D0);
-            padding: 10px 15px;
+            padding: 6px 12px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -51,8 +51,8 @@
         }
 
         .title-bar-btn {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
         }
 
@@ -71,20 +71,13 @@
 
         /* 터미널 내용 */
         .terminal-body {
-            background: #FFFFFF;
+            background: #000;
             flex: 1;
-            padding: 20px;
+            padding: 0;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-        }
-
-        /* 터미널 프롬프트 스타일 */
-        .terminal-prompt {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 15px;
-            font-family: 'Monaco', 'Menlo', monospace;
+            position: relative;
         }
 
         /* 메인 콘텐츠 영역 */
@@ -94,29 +87,34 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
-        /* 돌로레스 이미지 */
-        .dolores-image {
-            width: 180px;
-            height: auto;
-            margin-bottom: 25px;
+        /* 돌로레스 영상 */
+        .dolores-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        /* 자막 영역 */
+        /* 자막 영역 - 하단에 오버레이 */
         .subtitle-area {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            right: 0;
             text-align: center;
-            min-height: 60px;
-            margin-bottom: 20px;
+            padding: 10px;
         }
 
         .subtitle-line {
-            color: #000000;
-            font-size: 16px;
+            color: #FFFFFF;
+            font-size: 18px;
             line-height: 1.6;
             margin: 4px 0;
             opacity: 0;
             transition: opacity 0.5s ease;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
         .subtitle-line.visible {
@@ -124,13 +122,17 @@
         }
 
         .subtitle-line.rabbit {
-            color: #666;
+            color: #FFFF00;
             font-style: italic;
         }
 
         /* y/n 선택 */
         .choice-area {
-            margin-top: 15px;
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            text-align: center;
             display: none;
         }
 
@@ -139,8 +141,9 @@
         }
 
         .choice {
-            color: #000;
-            font-size: 18px;
+            color: #FFFFFF;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
         .choice span {
@@ -149,15 +152,17 @@
         }
 
         .choice span:hover {
-            color: #0066CC;
+            color: #00FF00;
         }
 
         /* 영상 영역 */
         .video-area {
             display: none;
             width: 100%;
-            max-width: 640px;
-            margin-top: 20px;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
 
         .video-area.visible {
@@ -166,18 +171,18 @@
 
         .video-area video {
             width: 100%;
-            border-radius: 5px;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* 아이콘 컨테이너 */
         .icons-container {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
+            margin-top: 30px;
             display: flex;
             gap: 15px;
             z-index: 100;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .desktop-icon {
@@ -210,14 +215,12 @@
 
         /* 하단 크레딧 */
         .credits {
-            position: fixed;
-            bottom: 20px;
-            left: 0;
-            right: 0;
+            margin-top: 20px;
             text-align: center;
             font-size: 12px;
             color: rgba(255, 255, 255, 0.6);
             line-height: 1.6;
+            padding-bottom: 20px;
         }
 
         .credits a {
@@ -233,20 +236,12 @@
         @media (max-width: 768px) {
             body {
                 padding: 10px;
-                justify-content: flex-start;
-                padding-top: 20px;
             }
 
             .terminal-window {
                 width: 100%;
                 max-width: 100%;
-                height: auto;
-                min-height: 400px;
-                max-height: 60vh;
-            }
-
-            .dolores-image {
-                width: 120px;
+                height: 50vh;
             }
 
             .subtitle-line {
@@ -254,15 +249,8 @@
             }
 
             .icons-container {
-                position: relative;
-                bottom: auto;
-                left: auto;
-                transform: none;
                 margin-top: 20px;
                 gap: 8px;
-                flex-wrap: wrap;
-                justify-content: center;
-                width: 100%;
             }
 
             .desktop-icon img {
@@ -275,10 +263,7 @@
             }
 
             .credits {
-                position: relative;
-                bottom: auto;
-                margin-top: 20px;
-                padding-bottom: 20px;
+                margin-top: 15px;
             }
         }
     </style>
@@ -292,10 +277,10 @@
             <div class="title-bar-text">Follow the white rabbit.exe</div>
         </div>
         <div class="terminal-body">
-            <div class="terminal-prompt">Last login: Mon Dec 1 20:32:53 on ttys000</div>
-            
             <div class="main-content">
-                <img src="dolores.png" alt="Dolores" class="dolores-image">
+                <video class="dolores-video" id="doloresVideo" autoplay loop muted playsinline>
+                    <source src="dolores.mp4" type="video/mp4">
+                </video>
                 
                 <div class="subtitle-area" id="subtitleArea">
                     <!-- 자막이 여기에 표시됨 -->
@@ -435,7 +420,7 @@
             
             setTimeout(() => {
                 subtitleArea.style.display = 'none';
-                document.querySelector('.dolores-image').style.display = 'none';
+                document.getElementById('doloresVideo').style.display = 'none';
                 videoArea.classList.add('visible');
                 shuffledVideos = shuffle(videos);
                 videoIndex = 0;
