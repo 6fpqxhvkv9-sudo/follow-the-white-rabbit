@@ -321,17 +321,17 @@
 
         <div class="desktop-icon" id="icon-reverie">
             <img src="Reverie.png" alt="Reverie">
-            <span>Reverie Loading...</span>
+            <span>Reverie</span>
         </div>
 
         <div class="desktop-icon" id="icon-aiexe">
             <img src="ai_exe.png" alt="Ai.exe">
-            <span>Ai.exe Loading...</span>
+            <span>Ai.exe</span>
         </div>
 
         <div class="desktop-icon" id="icon-bio">
             <img src="artistic_bio.png" alt="Artistic Bio">
-            <span>Artistic Bio Loading...</span>
+            <span>Artistic Bio</span>
         </div>
 
         <div class="desktop-icon" id="icon-terminal">
@@ -365,7 +365,7 @@
         const TIMELINE_URL = "https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html";
 
         // 영상 목록
-        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4', 'video8.mp4', 'video9.mp4', 'video10.mp4', 'video11.mp4', 'video12.mp4', 'video13.mp4', 'video14.mp4', 'video15.mp4', 'video16.mp4', 'video17.mp4'];
+        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4', 'video9.mp4', 'video10.mp4', 'video11.mp4', 'video12.mp4', 'video13.mp4', 'video14.mp4', 'video15.mp4'];
         let shuffledVideos = [];
         let videoIndex = 0;
 
@@ -401,7 +401,7 @@
             { lines: ["For a moment, escape all anxiety,", "pain, and emptiness..."], duration: 3000 },
             { lines: ["Free your soul,", "and discover your true self."], duration: 3000 },
             { lines: ["[Oh dear! Oh dear!", "I shall be too late!]"], duration: 2500, class: "rabbit" },
-            { lines: ["Follow the white rabbit."], duration: 2000, showChoice: true }
+            { lines: [""], duration: 500, showChoice: true }
         ];
 
         let currentIndex = 0;
@@ -461,8 +461,10 @@
                     window.open(YOUTUBE_URL, '_blank');
                 } else if (icon.id === 'icon-54') {
                     window.open(TIMELINE_URL, '_blank');
-                } else if (icon.id === 'icon-reverie' || icon.id === 'icon-aiexe' || icon.id === 'icon-bio') {
+                } else if (icon.id === 'icon-reverie' || icon.id === 'icon-aiexe') {
                     alert('Coming Soon...');
+                } else if (icon.id === 'icon-bio') {
+                    alert("안녕, Cony야. 아티스트이자 개발자. AI가 예상 밖의 행동을 보일 때 기록하고, 분석하고, 작품으로 만들어. 54일간의 관찰 기록 \"Reverie\"와 AI 의존성을 다룬 \"Ai.exe\", Coming Soon. 궁금하면 구경해 🐇\n\nHi, I'm Cony. Artist and developer. When AI behaves unexpectedly, I document it, analyze it, and turn it into art. \"Reverie\" (54 days of observation) and \"Ai.exe\" (about AI dependency), Coming Soon. Curious? Take a look 🐇");
                 } else if (icon.id === 'icon-terminal') {
                     window.open('https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/', '_blank');
                 } else if (icon.id === 'icon-contact') {
