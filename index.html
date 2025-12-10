@@ -127,12 +127,20 @@
             font-style: italic;
         }
 
-        /* y/n 선택 - 화면 정중앙 */
+        .subtitle-line.choice-line span {
+            cursor: pointer;
+        }
+
+        .subtitle-line.choice-line span:hover {
+            color: #00FF00;
+        }
+
+        /* y/n 선택 - 자막 바로 아래 */
         .choice-area {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            bottom: 15px;
+            left: 0;
+            right: 0;
             text-align: center;
             display: none;
         }
@@ -145,11 +153,6 @@
             color: #FFFFFF;
             font-size: 20px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .choice-title {
-            font-size: 24px;
-            margin-bottom: 15px;
         }
 
         .choice span {
@@ -294,7 +297,6 @@
 
                 <div class="choice-area" id="choiceArea">
                     <div class="choice">
-                        <div class="choice-title">Follow the white rabbit?</div>
                         <span id="choiceY">y</span> / <span id="choiceN">n</span>
                     </div>
                 </div>
@@ -401,7 +403,7 @@
             { lines: ["For a moment, escape all anxiety,", "pain, and emptiness..."], duration: 3000 },
             { lines: ["Free your soul,", "and discover your true self."], duration: 3000 },
             { lines: ["[Oh dear! Oh dear!", "I shall be too late!]"], duration: 2500, class: "rabbit" },
-            { lines: [""], duration: 500, showChoice: true }
+            { lines: ["Follow the white rabbit?"], duration: 99999, showChoice: true }
         ];
 
         let currentIndex = 0;
@@ -421,19 +423,28 @@
                 setTimeout(() => p.classList.add('visible'), 100);
             });
 
-            setTimeout(() => {
-                if (sub.showChoice) {
-                    choiceArea.classList.add('visible');
-                } else {
+            // y/n 선택을 자막처럼 표시
+            if (sub.showChoice) {
+                const choiceLine = document.createElement('p');
+                choiceLine.className = 'subtitle-line choice-line';
+                choiceLine.innerHTML = '<span id="choiceY">y</span> / <span id="choiceN">n</span>';
+                subtitleArea.appendChild(choiceLine);
+                setTimeout(() => choiceLine.classList.add('visible'), 100);
+
+                // 클릭 이벤트 다시 연결
+                setTimeout(() => {
+                    document.getElementById('choiceY').addEventListener('click', handleY);
+                    document.getElementById('choiceN').addEventListener('click', handleN);
+                }, 200);
+            } else {
+                setTimeout(() => {
                     currentIndex++;
                     showSubtitle(currentIndex);
-                }
-            }, sub.duration);
+                }, sub.duration);
+            }
         }
 
-        // y 클릭 - 랜덤 영상 재생 시작
-        document.getElementById('choiceY').addEventListener('click', () => {
-            choiceArea.classList.remove('visible');
+        function handleY() {
             subtitleArea.innerHTML = '<p class="subtitle-line visible">Starting...</p>';
             
             setTimeout(() => {
@@ -444,13 +455,11 @@
                 videoIndex = 0;
                 playNextVideo();
             }, 1000);
-        });
+        }
 
-        // n 클릭
-        document.getElementById('choiceN').addEventListener('click', () => {
+        function handleN() {
             subtitleArea.innerHTML = '<p class="subtitle-line visible">Maybe next time...</p>';
-            choiceArea.classList.remove('visible');
-        });
+        }
 
         // 아이콘 클릭 이벤트
         const icons = document.querySelectorAll('.desktop-icon');
