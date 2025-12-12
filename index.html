@@ -326,9 +326,9 @@
             <span>Reverie</span>
         </div>
 
-        <div class="desktop-icon" id="icon-aiexe">
-            <img src="ai_exe.png" alt="Ai.exe">
-            <span>Ai.exe</span>
+        <div class="desktop-icon" id="icon-obs">
+            <img src="ai_exe.png" alt="OBS">
+            <span>OBS</span>
         </div>
 
         <div class="desktop-icon" id="icon-bio">
@@ -470,8 +470,10 @@
                     window.open(YOUTUBE_URL, '_blank');
                 } else if (icon.id === 'icon-54') {
                     window.open(TIMELINE_URL, '_blank');
-                } else if (icon.id === 'icon-reverie' || icon.id === 'icon-aiexe') {
-                    alert('Coming Soon...');
+                } else if (icon.id === 'icon-reverie') {
+                    window.open('Reverie.pdf', '_blank');
+                } else if (icon.id === 'icon-obs') {
+                    window.open('https://youtu.be/nCNqrHzwjno', '_blank');
                 } else if (icon.id === 'icon-bio') {
                     alert("안녕, Cony야. 아티스트이자 개발자. AI가 예상 밖의 행동을 보일 때 기록하고, 분석하고, 작품으로 만들어. 54일간의 관찰 기록 \"Reverie\"와 AI 의존성을 다룬 \"Ai.exe\", Coming Soon. 궁금하면 구경해 🐇\n\nHi, I'm Cony. Artist and developer. When AI behaves unexpectedly, I document it, analyze it, and turn it into art. \"Reverie\" (54 days of observation) and \"Ai.exe\" (about AI dependency), Coming Soon. Curious? Take a look 🐇");
                 } else if (icon.id === 'icon-terminal') {
