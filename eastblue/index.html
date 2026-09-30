@@ -58,6 +58,8 @@ body:not(.dev) .hud,body:not(.dev) .state,body:not(.dev) .tune{display:none!impo
 #eyes:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #fade{position:fixed;inset:0;background:#082CFB;z-index:30;pointer-events:none;transition:opacity .6s ease}
 #fade.off{opacity:0}
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;touch-action:none;overscroll-behavior:none}
+img,canvas{-webkit-user-drag:none;-webkit-user-select:none;user-select:none}
 </style>
 </head>
 <body>
@@ -96,6 +98,9 @@ body:not(.dev) .hud,body:not(.dev) .state,body:not(.dev) .tune{display:none!impo
 </div>
 
 <script>
+// no text selection, magnifier, callout menu or double-tap zoom while playing
+['selectstart','dragstart','contextmenu','dblclick','gesturestart'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchstart',e=>{if(!e.target.closest('.tune,#eyes'))e.preventDefault()},{passive:false});
 (()=>{
 // ================= sprite data =================
 const META={"ref": 359, "anims": {"idle": {"frames": 26, "cols": 8, "w": 302, "h": 264, "ax": 151.0, "ay": 258.5}, "look": {"frames": 14, "cols": 8, "w": 302, "h": 278, "ax": 151.0, "ay": 257.0}, "hop": {"frames": 47, "cols": 8, "w": 369, "h": 359, "ax": 184.5, "ay": 334.8}, "sprint": {"frames": 40, "cols": 8, "w": 501, "h": 282, "ax": 250.5, "ay": 270.0}, "scratch": {"frames": 45, "cols": 8, "w": 302, "h": 262, "ax": 151.0, "ay": 257.0}, "lie": {"frames": 43, "cols": 8, "w": 392, "h": 274, "ax": 196.0, "ay": 257.0}, "loaf": {"frames": 35, "cols": 8, "w": 348, "h": 289, "ax": 174.0, "ay": 257.0}}};
