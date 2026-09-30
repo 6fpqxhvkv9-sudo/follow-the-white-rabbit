@@ -671,7 +671,7 @@
     f.style.cssText = 'position:fixed;inset:0;z-index:50;background:var(--blue);opacity:0;transition:opacity .5s ease;pointer-events:none';
     document.body.appendChild(f);
     requestAnimationFrame(() => { f.style.opacity = '1'; });
-    setTimeout(() => { location.href = 'eastblue/'; }, 520);
+    setTimeout(() => { location.href = 'eastblue/?v=3'; }, 520);
     addEventListener('pageshow', e => { if (e.persisted) f.remove(); }, { once:true });
   }
   function act(a) {
