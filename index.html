@@ -1,613 +1,863 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cony Terminal</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="utf-8">
+<meta name="description" content="Cony — media artist, composer and AI researcher. Follow the white rabbit into the blue.">
+<meta property="og:title" content="Cony — Follow the White Rabbit">
+<meta property="og:description" content="Media artist, composer and AI researcher. A blue-screen world.">
+<link rel="icon" href="favicon.png">
+<title>Follow the White Rabbit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=Noto+Sans+KR:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; } }
+  :root[data-theme="dark"] { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--blue); overscroll-behavior:none; }
+  body { -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; font-family:'Inter', system-ui, sans-serif; }
+  #map { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; display:block; touch-action:none; cursor:grab; }
+  #map.drag { cursor:grabbing; }
+  #map [data-act] { cursor:pointer; transition:opacity .15s; }
+  @media (hover:hover) { #map [data-act]:hover { opacity:.75; } }
+  #map tspan[data-act] { text-decoration:underline; text-underline-offset:6px; }
+  #map [data-act]:focus { outline:none; }
+  #map text[data-act] { pointer-events:bounding-box; }
+  #map [data-act]:focus-visible { opacity:.6; }
+  #map text { font-family:'Inter', system-ui, sans-serif; }
 
-        body {
-            background-color: #0000AA; 
-            color: #000000;
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            font-size: 16px; 
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            user-select: none;
-        }
+  /* the eyes: always top-left */
+  #eyes { position:fixed; z-index:10; left:calc(14px + env(safe-area-inset-left,0px)); top:calc(14px + env(safe-area-inset-top,0px));
+          width:clamp(96px, 11vw, 150px); padding:6px; margin:-6px; border:0; background:none; cursor:pointer; line-height:0; }
+  #eyes img { width:100%; height:auto; display:block; pointer-events:none; filter:drop-shadow(0 2px 6px rgba(0,0,40,.25)); transition:transform .2s; }
+  @media (hover:hover) { #eyes:hover img { transform:scale(1.06); } }
+  #eyes:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 
-        /* 맥 터미널 창 */
-        .terminal-window {
-            width: 672px;
-            max-width: 95%;
-            aspect-ratio: 672 / 444;
-            background: #1a1a1a;
-            border-radius: 10px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
-
-        /* 맥 타이틀 바 */
-        .title-bar {
-            background: linear-gradient(to bottom, #E8E8E8, #D0D0D0);
-            padding: 6px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid #B0B0B0;
-        }
-
-        .title-bar-btn {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .btn-close { background: #ff5f56; }
-        .btn-minimize { background: #ffbd2e; }
-        .btn-maximize { background: #27ca3f; }
-
-        .title-bar-text {
-            flex: 1;
-            text-align: center;
-            color: #333;
-            font-size: 13px;
-            font-weight: 500;
-            margin-right: 50px;
-        }
-
-        /* 터미널 내용 */
-        .terminal-body {
-            background: #000;
-            flex: 1;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* 메인 콘텐츠 영역 */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        /* 돌로레스 영상 */
-        .dolores-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* 자막 영역 - 하단에 오버레이 */
-        .subtitle-area {
-            position: absolute;
-            bottom: 40px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            padding: 10px;
-        }
-
-        .subtitle-line {
-            color: #FFFFFF;
-            font-size: 18px;
-            line-height: 1.6;
-            margin: 4px 0;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .subtitle-line.visible {
-            opacity: 1;
-        }
-
-        .subtitle-line.rabbit {
-            color: #FFFF00;
-            font-style: italic;
-        }
-
-        .subtitle-line.choice-line span {
-            cursor: pointer;
-        }
-
-        .subtitle-line.choice-line span:hover {
-            color: #00FF00;
-        }
-
-        /* y/n 선택 - 자막 바로 아래 */
-        .choice-area {
-            position: absolute;
-            bottom: 15px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            display: none;
-        }
-
-        .choice-area.visible {
-            display: block;
-        }
-
-        .choice {
-            color: #FFFFFF;
-            font-size: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .choice span {
-            cursor: pointer;
-            margin: 0 10px;
-        }
-
-        .choice span:hover {
-            color: #00FF00;
-        }
-
-        /* 영상 영역 */
-        .video-area {
-            display: none;
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .video-area.visible {
-            display: block;
-        }
-
-        .video-area video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* 아이콘 컨테이너 */
-        .icons-container {
-            margin-top: 30px;
-            display: flex;
-            gap: 15px;
-            z-index: 100;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .desktop-icon {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
-
-        .desktop-icon:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .desktop-icon img {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-            margin-bottom: 6px;
-        }
-
-        .desktop-icon span {
-            color: #FFFFFF;
-            font-size: 12px;
-            text-align: center;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
-
-        /* 하단 크레딧 */
-        .credits {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-            line-height: 1.6;
-            padding-bottom: 20px;
-        }
-
-        .credits a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-        }
-
-        .credits a:hover {
-            color: #FFFFFF;
-        }
-
-        /* 반응형 */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .terminal-window {
-                width: 100%;
-                max-width: 100%;
-                height: 50vh;
-            }
-
-            .subtitle-line {
-                font-size: 14px;
-            }
-
-            .icons-container {
-                margin-top: 20px;
-                gap: 8px;
-            }
-
-            .desktop-icon img {
-                width: 50px;
-                height: 50px;
-            }
-
-            .desktop-icon span {
-                font-size: 10px;
-            }
-
-            .credits {
-                margin-top: 15px;
-            }
-        }
-        /* Video Modal */
-        .video-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .video-modal.active {
-            display: flex;
-        }
-
-        .modal-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            cursor: pointer;
-        }
-
-        .modal-content {
-            position: relative;
-            width: 90%;
-            max-width: 900px;
-            z-index: 1001;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: -40px;
-            right: 0;
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 36px;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-
-        .modal-close:hover {
-            opacity: 1;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            padding-bottom: 56.25%; /* 16:9 비율 */
-            background: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-    </style>
+  /* video window */
+  #player { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,10,80,.35); }
+  #player.on { display:flex; }
+  .win { width:min(960px, 100%); background:#000; border-radius:10px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,40,.45); }
+  .bar { display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; background:var(--bar); color:var(--barink); font-size:13px; }
+  .dot { width:13px; height:13px; border-radius:50%; border:0; padding:0; flex:none; }
+  .dot.r { background:#ff5f57; cursor:pointer; } .dot.y { background:#febc2e; } .dot.g { background:#28c840; }
+  .bar .ttl { flex:1; min-width:0; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar a { color:var(--barink); text-decoration:none; opacity:.7; font-size:12px; white-space:nowrap; }
+  .bar a:hover { opacity:1; }
+  .screen { position:relative; aspect-ratio:16/9; background:#000; }
+  .screen iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .nav { display:none; align-items:center; justify-content:center; gap:18px; height:40px; background:var(--bar); color:var(--barink); font-size:14px; }
+  .nav.on { display:flex; }
+  .nav button { border:0; background:none; font:inherit; font-size:20px; color:var(--barink); cursor:pointer; padding:4px 12px; }
+  .nav button:disabled { opacity:.25; cursor:default; }
+  /* language switch: top-right, mirrors the eyes */
+  #lang { position:fixed; z-index:10; right:calc(14px + env(safe-area-inset-right,0px)); top:calc(18px + env(safe-area-inset-top,0px));
+          border:0; background:none; color:rgba(255,255,255,.6); font:400 14px/1 'Inter', sans-serif; letter-spacing:.04em; padding:8px 6px; margin:-8px -6px; cursor:pointer; }
+  #lang .on { color:#fff; text-decoration:underline; text-underline-offset:4px; }
+  #lang:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+</style>
 </head>
 <body>
-    <div class="terminal-window">
-        <div class="title-bar">
-            <div class="title-bar-btn btn-close"></div>
-            <div class="title-bar-btn btn-minimize"></div>
-            <div class="title-bar-btn btn-maximize"></div>
-            <div class="title-bar-text">Follow the white rabbit.exe</div>
-        </div>
-        <div class="terminal-body">
-            <div class="main-content">
-                <video class="dolores-video" id="doloresVideo" autoplay loop muted playsinline>
-                    <source src="dolores.mp4" type="video/mp4">
-                </video>
-                
-                <div class="subtitle-area" id="subtitleArea">
-                    <!-- 자막이 여기에 표시됨 -->
-                </div>
-
-                <div class="choice-area" id="choiceArea">
-                    <div class="choice">
-                        <span id="choiceY">y</span> / <span id="choiceN">n</span>
-                    </div>
-                </div>
-
-                <div class="video-area" id="videoArea">
-                    <video id="gameVideo" muted playsinline>
-                    </video>
-                </div>
-            </div>
-        </div>
+<button id="eyes" type="button" aria-label="Back to start"><img src="img/eyes.webp" alt=""></button>
+<div id="player" role="dialog" aria-modal="true" aria-label="Video">
+  <div class="win">
+    <div class="bar">
+      <button class="dot r" type="button" aria-label="Close video" data-close></button><span class="dot y"></span><span class="dot g"></span>
+      <span class="ttl" id="ttl"></span>
+      <a id="yt" href="#" target="_blank" rel="noopener">YouTube ↗</a>
     </div>
-
-    <!-- 아이콘들 -->
-    <div class="icons-container">
-        <div class="desktop-icon" id="icon-youtube">
-            <img src="rabbit_youtube.png" alt="YouTube">
-            <span>YouTube</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-54">
-            <img src="Papers_54.png" alt="54">
-            <span>54</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-reverie">
-            <img src="Reverie.png" alt="Reverie">
-            <span>Reverie</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-obs">
-            <img src="ai_exe.png" alt="OBS">
-            <span>OBS</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-bio">
-            <img src="artistic_bio.png" alt="Artistic Bio">
-            <span>Artistic Bio</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-terminal">
-            <img src="terminal_home.png" alt="Terminal">
-            <span>Terminal</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-contact">
-            <img src="contact.png" alt="Contact">
-            <span>Contact</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-loop">
-            <img src="loop.png" alt="Loop">
-            <span>Loop</span>
-        </div>
-
-        <div class="desktop-icon" id="icon-claude">
-            <img src="claude.png" alt="Claude">
-            <span>Claude</span>
-        </div>
+    <div class="screen" id="screen"></div>
+    <div class="nav" id="nav">
+      <button type="button" id="prev" aria-label="Previous video">‹</button>
+      <span id="count"></span>
+      <button type="button" id="next" aria-label="Next video">›</button>
     </div>
+  </div>
+</div>
+<svg id="map" viewBox="0 0 16079 13479" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Cony's blue world" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="Frame 2">
+<rect id="Reverie 1" x="13441" y="2701" width="601" height="689" fill="url(#pattern0_3857_1518)"/>
+<rect id="dance" x="7886" y="4461" width="644" height="1232" fill="url(#pattern1_3857_1518)"/>
+<rect id="grok-video-79b15dc8-a716-4614-b165-da06dc25ad2b-0001 1" x="3276" y="4018" width="473" height="465" fill="url(#pattern2_3857_1518)"/>
+<rect id="image 9" x="2457" y="1788" width="1440" height="812" fill="url(#pattern3_3857_1518)"/>
+<rect id="image 11" x="1184" y="9222" width="1019" height="826" fill="url(#pattern4_3857_1518)"/>
+<g id="conix">
+<rect id="fqge 1" x="1574" y="5184" width="515" height="491" fill="url(#pattern5_3857_1518)"/>
+<text id="Conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="64" letter-spacing="0em"><tspan x="1742" y="5769.77">Conix</tspan></text>
+<text id="2024" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1787" y="6288.14">2024</tspan></text>
+<text id="2023" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1787" y="6482.14">2023</tspan></text>
+<text id="2022" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1787" y="6679.14">2022</tspan></text>
+<text id="2021" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1799" y="6877.14">2021</tspan></text>
+<text id="2020" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1787" y="7070.14">2020</tspan></text>
+<text id="2019" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1787" y="7345.14">2019</tspan></text>
+<rect id="-&gt;start" x="1435" y="7684" width="247" height="181" fill="url(#pattern6_3857_1518)"/>
+<text id="-&gt;home" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="1511" y="7907.27">&#x2192;home</tspan></text>
+<rect id="-&gt;hum youtube" x="1392" y="7419" width="1336" height="901" fill="url(#pattern7_3857_1518)"/>
+<text id="2024 Immersive Media Art Exhibition — Heyri Museum, Paju" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1548.61" y="6331.14">2024 Immersive Media Art Exhibition &#10;</tspan><tspan x="1660.8" y="6370.14">&#x2014; Heyri Museum, Paju  </tspan></text>
+<text id="2023 Eterno Cheongdam — outdoor signage" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1628.56" y="6527.14">2023 Eterno Cheongdam &#10;</tspan><tspan x="1679.11" y="6566.14">&#x2014; outdoor signage </tspan></text>
+<text id="2022 Gwanghwamun Media Façade Competition — Grand Prize, Sejong Center" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1482.2" y="6722.14">2022 Gwanghwamun Media Fa&#xe7;ade Competition &#10;</tspan><tspan x="1629.47" y="6761.14">&#x2014; Grand Prize, Sejong Center  </tspan></text>
+<text id="2021 Jungnangcheon Media Façade — 25-episode series, Seoul Metropolitan Government" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1556.59" y="6921.14">2021 Jungnangcheon Media Fa&#xe7;ade&#10;</tspan><tspan x="1420.06" y="6960.14"> &#x2014; 25-episode series, Seoul Metropolitan Government  </tspan></text>
+<text id="2020 Design Art Fair, Seoul Arts Center Hanwha 70th Anniversary — TV &amp; newspaper campaign" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1342.28" y="7113.14">2020 Design Art Fair, Seoul Arts Center  Hanwha 70th Anniversary &#10;</tspan><tspan x="1621.34" y="7152.14">&#x2014; TV &#38; newspaper campaign &#10;</tspan></text>
+<text id="2019 Carder Garden — music video" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1661.14" y="7394.14"> 2019 Carder Garden &#10;</tspan><tspan x="1712.2" y="7433.14">&#x2014; music video</tspan></text>
+<text id="Conix is a video technique I developed in 2020. Every frame of a video is repainted with digital brushwork and played back at six frames per second, a speed at which each stroke stays visible while the image still moves. Paired with slow ambient music I compose, it lets time pass a little more slowly for the viewer. Conix works won the Grand Prize of the Gwanghwamun Media Art Competition and were made with Seoul Metropolitan Government, Sejong Center, Shinsegae, Hanwha, KT and MBC." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="1369" y="5862.14">Conix is a video technique I developed in 2020. Every frame of </tspan><tspan x="1369" y="5901.14">a video is repainted with digital brushwork and played back at </tspan><tspan x="1369" y="5940.14">six frames per second, a speed at which each stroke stays </tspan><tspan x="1369" y="5979.14">visible while the image still moves. Paired with slow ambient </tspan><tspan x="1369" y="6018.14">music I compose, it lets time pass a little more slowly for the </tspan><tspan x="1369" y="6057.14">viewer. Conix works won the Grand Prize of the </tspan><tspan x="1369" y="6096.14">Gwanghwamun Media Art Competition and were made with </tspan><tspan x="1369" y="6135.14">Seoul Metropolitan Government, Sejong Center, Shinsegae, </tspan><tspan x="1369" y="6174.14">Hanwha, KT and MBC.</tspan></text>
+<text id="-&gt;...hum" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="1763" y="7766.27">&#x2192;...hum</tspan></text>
+</g>
+<g id="pig">
+<text id="Pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="9750" y="4177.91">Pig</tspan></text>
+<rect id="-&gt;pig youtube" x="9175" y="4544" width="1215" height="442" fill="url(#pattern8_3857_1518)"/>
+<rect id="레이어 3 1" x="9107" y="8437" width="1269" height="502" fill="url(#pattern9_3857_1518)"/>
+<text id="In Pig, love blooms from that same blue void. AI-generated figures paintings that were never painted, birds, flowers. original. Yet it feels warm. The music loops. The video loops. Blue has no edge. Neither does love." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="9371" y="4273.14">In Pig, love blooms from that same blue void. AI-generated </tspan><tspan x="9371" y="4312.14">figures paintings that were never painted, birds, flowers. </tspan><tspan x="9371" y="4351.14">original. Yet it feels warm. The music loops. The video loops. </tspan><tspan x="9371" y="4390.14">Blue has no edge. Neither does love.</tspan></text>
+<text id="Pig_4â€™54â€_Single-channel video_Loop_2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="9371" y="5091.55">Pig_4&#x2019;54&#x201d;_Single-channel video_Loop_2026</tspan></text>
+<text id="Pig is the second movement of the AI.exe series. The first, AI.exe: Dante&#x27;s Fall (ISEA 2026 Dubai), traced a vertical descent into a digital inferno ending in a system crash. Pig begins at that very horizon of termination. The work unfolds inside the blue. AI-generated apparitions — classical portraits, hummingbirds, white freesias, slices of cheesecake — drift across the screen. These are products of Reverie, a phenomenon of machine hallucination I identified during my research on LLMs. By curating only the unpredictable glitches from the Grok model — outputs that drifted from the prompt&#x27;s intent — I bridge the gap between mechanical failure and human emotion. We react most profoundly to the moments we cannot predict. The soundtrack, a mid-tempo fusion of future bass and synth-pop, functions as a seamless loop. Heavy sidechain compression creates a visceral pulse, like a heartbeat. Sound and image breathe together in the same blue void. In truth, this is a record of love. The floating icons are things beloved by the person I love. She was born in the Year of the Pig — the final animal of the East Asian zodiac. An animal of abundance, pleasure, fantasy, and mercy. The blue screen is where everything terminates. But it is also where a new cycle begins." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="9352" y="5207.14">Pig is the second movement of the AI.exe series. The first, </tspan><tspan x="9352" y="5246.14">AI.exe: Dante&#39;s Fall (ISEA 2026 Dubai), traced a vertical </tspan><tspan x="9352" y="5285.14">descent into a digital inferno ending in a system crash. Pig </tspan><tspan x="9352" y="5324.14">begins at that very horizon of termination.&#10;</tspan><tspan x="9352" y="5363.14">&#10;</tspan><tspan x="9352" y="5402.14">The work unfolds inside the blue. AI-generated apparitions &#x2014; </tspan><tspan x="9352" y="5441.14">classical portraits, hummingbirds, white freesias, slices of </tspan><tspan x="9352" y="5480.14">cheesecake &#x2014; drift across the screen. These are products of </tspan><tspan x="9352" y="5519.14">Reverie, a phenomenon of machine hallucination I identified </tspan><tspan x="9352" y="5558.14">during my research on LLMs. By curating only the </tspan><tspan x="9352" y="5597.14">unpredictable glitches from the Grok model &#x2014; outputs that </tspan><tspan x="9352" y="5636.14">drifted from the prompt&#39;s intent &#x2014; I bridge the gap between </tspan><tspan x="9352" y="5675.14">mechanical failure and human emotion. We react most </tspan><tspan x="9352" y="5714.14">profoundly to the moments we cannot predict.&#10;</tspan><tspan x="9352" y="5753.14">&#10;</tspan><tspan x="9352" y="5792.14">The soundtrack, a mid-tempo fusion of future bass and synth-</tspan><tspan x="9352" y="5831.14">pop, functions as a seamless loop. Heavy sidechain </tspan><tspan x="9352" y="5870.14">compression creates a visceral pulse, like a heartbeat. Sound </tspan><tspan x="9352" y="5909.14">and image breathe together in the same blue void.&#10;</tspan><tspan x="9352" y="5948.14">&#10;</tspan><tspan x="9352" y="5987.14">In truth, this is a record of love. The floating icons are things </tspan><tspan x="9352" y="6026.14">beloved by the person I love. She was born in the Year of the </tspan><tspan x="9352" y="6065.14">Pig &#x2014; the final animal of the East Asian zodiac. An animal of </tspan><tspan x="9352" y="6104.14">abundance, pleasure, fantasy, and mercy.&#10;</tspan><tspan x="9352" y="6143.14">&#10;</tspan><tspan x="9352" y="6182.14">The blue screen is where everything terminates. But it is also </tspan><tspan x="9352" y="6221.14">where a new cycle begins.</tspan></text>
+<rect id="-&gt;pig youtube_2" x="9490" y="9199" width="1170" height="1230" fill="url(#pattern10_3857_1518)"/>
+<rect id="image 12" x="9232" y="7650" width="1210" height="718" fill="url(#pattern11_3857_1518)"/>
+<rect id="image 13" x="9396" y="6379" width="874" height="1011" fill="url(#pattern12_3857_1518)"/>
+<rect id="-&gt;start_2" x="9243" y="9633" width="247" height="181" fill="url(#pattern13_3857_1518)"/>
+<text id="-&gt;home_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="9366" y="9861.27">&#x2192;home</tspan></text>
+<text id="-&gt;pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="9490" y="9411.27">&#x2192;pig</tspan></text>
+</g>
+<g id="idle">
+<rect id="brick factory 1-0008 1" x="11463" y="6529" width="1020.44" height="287" fill="url(#pattern14_3857_1518)"/>
+<text id="idle_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="11877" y="4006.91">idle</tspan></text>
+<rect id="brick factory 1-0014 1" x="11416" y="7525" width="1184" height="333" fill="url(#pattern15_3857_1518)"/>
+<rect id="brick factory 1-0012 1" x="11380" y="6825" width="1184" height="333" fill="url(#pattern16_3857_1518)"/>
+<rect id="brick factory 1-0003 1" x="11449" y="7185" width="1117" height="314" fill="url(#pattern17_3857_1518)"/>
+<rect id="-&gt;idle youtube" x="11130" y="4138" width="1713" height="482" fill="url(#pattern18_3857_1518)"/>
+<rect id="-&gt;start_3" width="245" height="179" transform="matrix(-1 0 0 1 12454 8292)" fill="url(#pattern19_3857_1518)"/>
+<text id="-&gt;home_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="12310" y="8508.27">&#x2192;home</tspan></text>
+<rect id="-&gt; soak youtube" x="11142" y="8192" width="1032" height="672" fill="url(#pattern20_3857_1518)"/>
+<text id="Idle_Parinirvana is the third movement of the AI.exe series. The first, AI.exe: Dante&#x27;s Fall (ISEA 2026 Dubai), descended into a digital inferno and ended in a system crash. The second, Pig, bloomed from that horizon as a record of love. In the third, everyone lies down. The work unfolds inside the blue. Bodies in latex, sunglasses and luxury fashion, a laughing giant, a tiger, a mastiff all rest in a single shared pose: lying on the right side, head supported by one hand. In Western painting, this is the odalisque, a body arranged to receive the viewer&#x27;s desire. In the East, the same pose is the reclining Buddha on the edge of Parinirvana, the final release from all desire. One posture points to desire and to its end at once. The most desired bodies hold the least desiring posture. The bodies do not move. Only the eyes drift, slowly, from side to side. They are not asleep, and they are not gone. In the exhibition, a central blue image carrying hand-painted icons stands between two wide screens where the figures play simultaneously, stretched in a 32:9 frame like the monumental reclining Buddhas of Southeast Asia. The soundtrack is Claude Debussy&#x27;s Rêverie (1890). It shares its name with Reverie, the phenomenon I identified in my research on LLMs: the moments when a machine drifts from the prompt&#x27;s intent. Slow piano passes over the still bodies, and sound and image dream together in the same blue. In the old Parinirvana paintings, animals gathered around the Buddha to witness his last moment. Here, the witnesses have taken his place. Everyone lies down in the same way, in the same blue, waiting. Idle is what a machine is called when it is switched on but running nothing. The blue screen is where everything terminates. Just before it does, everything is idle." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="11463" y="4815.14">&#10;</tspan><tspan x="11463" y="4854.14">&#10;</tspan><tspan x="11463" y="4893.14">Idle_Parinirvana is the third movement of the AI.exe series. The </tspan><tspan x="11463" y="4932.14">first, AI.exe: Dante&#39;s Fall (ISEA 2026 Dubai), descended into a </tspan><tspan x="11463" y="4971.14">digital inferno and ended in a system crash. The second, Pig, </tspan><tspan x="11463" y="5010.14">bloomed from that horizon as a record of love. In the third, </tspan><tspan x="11463" y="5049.14">everyone lies down.&#10;</tspan><tspan x="11463" y="5088.14">&#10;</tspan><tspan x="11463" y="5127.14">The work unfolds inside the blue. Bodies in latex, sunglasses and </tspan><tspan x="11463" y="5166.14">luxury fashion, a laughing giant, a tiger, a mastiff all rest in a single </tspan><tspan x="11463" y="5205.14">shared pose: lying on the right side, head supported by one hand. </tspan><tspan x="11463" y="5244.14">In Western painting, this is the odalisque, a body arranged to </tspan><tspan x="11463" y="5283.14">receive the viewer&#39;s desire. In the East, the same pose is the </tspan><tspan x="11463" y="5322.14">reclining Buddha on the edge of Parinirvana, the final release from </tspan><tspan x="11463" y="5361.14">all desire. One posture points to desire and to its end at once. The </tspan><tspan x="11463" y="5400.14">most desired bodies hold the least desiring posture.&#10;</tspan><tspan x="11463" y="5439.14">&#10;</tspan><tspan x="11463" y="5478.14">The bodies do not move. Only the eyes drift, slowly, from side to </tspan><tspan x="11463" y="5517.14">side. They are not asleep, and they are not gone. In the exhibition, </tspan><tspan x="11463" y="5556.14">a central blue image carrying hand-painted icons stands between </tspan><tspan x="11463" y="5595.14">two wide screens where the figures play simultaneously, stretched </tspan><tspan x="11463" y="5634.14">in a 32:9 frame like the monumental reclining Buddhas of </tspan><tspan x="11463" y="5673.14">Southeast Asia.&#10;</tspan><tspan x="11463" y="5712.14">&#10;</tspan><tspan x="11463" y="5751.14">The soundtrack is Claude Debussy&#39;s R&#xea;verie (1890). It shares its </tspan><tspan x="11463" y="5790.14">name with Reverie, the phenomenon I identified in my research on </tspan><tspan x="11463" y="5829.14">LLMs: the moments when a machine drifts from the prompt&#39;s </tspan><tspan x="11463" y="5868.14">intent. Slow piano passes over the still bodies, and sound and </tspan><tspan x="11463" y="5907.14">image dream together in the same blue.&#10;</tspan><tspan x="11463" y="5946.14">&#10;</tspan><tspan x="11463" y="5985.14">In the old Parinirvana paintings, animals gathered around the </tspan><tspan x="11463" y="6024.14">Buddha to witness his last moment. Here, the witnesses have </tspan><tspan x="11463" y="6063.14">taken his place. Everyone lies down in the same way, in the same </tspan><tspan x="11463" y="6102.14">blue, waiting.&#10;</tspan><tspan x="11463" y="6141.14">&#10;</tspan><tspan x="11463" y="6180.14">Idle is what a machine is called when it is switched on but running </tspan><tspan x="11463" y="6219.14">nothing. The blue screen is where everything terminates. Just </tspan><tspan x="11463" y="6258.14">before it does, everything is idle.</tspan></text>
+<text id="Idle_Parinirvana_2′31″_Multi-channel video_Loop_2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="11453" y="4761.55">Idle_Parinirvana_2&#x2032;31&#x2033;_Multi-channel video_Loop_2026</tspan></text>
+<text id="-&gt;Fred again.. &amp; SOAK - just stand there " fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="11464" y="8918.27">&#x2192;Fred again.. &#38; SOAK - just stand there&#xa0;</tspan></text>
+</g>
+<g id="start">
+<rect id="start_cv" x="6829" y="5515" width="267" height="377" fill="url(#pattern21_3857_1518)"/>
+<rect id="start_cony" x="6550" y="5023" width="434" height="312" fill="url(#pattern22_3857_1518)"/>
+<rect id="-&gt;insta" x="6988" y="4736" width="196" height="204" fill="url(#pattern23_3857_1518)"/>
+<rect id="-&gt;work" x="6163" y="5429" width="204" height="222" fill="url(#pattern24_3857_1518)"/>
+<text id="-&gt;CV" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6947" y="5911.27">&#x2192;CV&#10;</tspan></text>
+<text id="-&gt;youtube" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6343" y="6433.27">&#x2192;youtube</tspan></text>
+<text id="-&gt;Work" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6244" y="5688.27">&#x2192;Work&#10;</tspan></text>
+<text id="-&gt;insta" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7080" y="4980.27">&#x2192;insta</tspan></text>
+<text id="-&gt;conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6309" y="6081.27">&#x2192;conix</tspan></text>
+<text id="-&gt;Contact" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7032" y="6075.27">&#x2192;Contact</tspan></text>
+<rect id="-&gt;cony youtube" x="6224" y="6183" width="387" height="260" fill="url(#pattern25_3857_1518)"/>
+<rect id="-&gt;contact" x="6715" y="6112" width="613" height="410" fill="url(#pattern27_3857_1518)"/>
+<rect id="-&gt;conix" x="6249" y="5855" width="207" height="182" fill="url(#pattern28_3857_1518)"/>
+</g>
+<text id="-&gt;softmax" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5028" y="5258.27">&#x2192;softmax</tspan></text>
+<g id="cv">
+<rect id="rabbit_youtube 2" x="5164" y="889" width="225" height="318" fill="url(#pattern29_3857_1518)"/>
+<text id="Cony, b. 1988 Media artist / Composer / AI researcher EDUCATION BFA Painting, Chung-Ang University 2026 ISEA2026 Dubai, Academic Programme — AI.exe: Dante&#x27;s Fall — Reverie (research paper) Tomato Ketchup Picnic — art direction &amp; visuals, 24h open-air rave 2024 Immersive Media Art Exhibition — Heyri Museum, Paju 2023 Eterno Cheongdam — outdoor signage 2022 Gwanghwamun Media Façade Competition — Grand Prize, Sejong Center 2021 Jungnangcheon Media Façade — 25-episode series, Seoul Metropolitan Government Shinsegae Department Store Daejeon — display installation 2020 Design Art Fair, Seoul Arts Center Hanwha 70th Anniversary — TV &amp; newspaper campaign 2019 Carder Garden — music video" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="4894" y="1743.14">Cony, b. 1988 &#10;</tspan><tspan x="4894" y="1782.14">Media artist / Composer / AI researcher  &#10;</tspan><tspan x="4894" y="1821.14">EDUCATION BFA Painting, Chung-Ang University  &#10;</tspan><tspan x="4894" y="1860.14">&#10;</tspan><tspan x="4894" y="1899.14">2026 ISEA2026 Dubai, Academic Programme &#10;</tspan><tspan x="4894" y="1938.14">&#x2014; AI.exe: Dante&#39;s Fall &#10;</tspan><tspan x="4894" y="1977.14">&#x2014; Reverie (research paper)  &#10;</tspan><tspan x="4894" y="2016.14">&#10;</tspan><tspan x="4894" y="2055.14">Tomato Ketchup Picnic &#10;</tspan><tspan x="4894" y="2094.14">&#x2014; art direction &#38; visuals, 24h open-air rave  &#10;</tspan><tspan x="4894" y="2133.14">&#10;</tspan><tspan x="4894" y="2172.14">2024 Immersive Media Art Exhibition &#10;</tspan><tspan x="4894" y="2211.14">&#x2014; Heyri Museum, Paju  &#10;</tspan><tspan x="4894" y="2250.14">&#10;</tspan><tspan x="4894" y="2289.14">2023 Eterno Cheongdam &#10;</tspan><tspan x="4894" y="2328.14">&#x2014; outdoor signage &#10;</tspan><tspan x="4894" y="2367.14">&#10;</tspan><tspan x="4894" y="2406.14"> 2022 Gwanghwamun Media Fa&#xe7;ade Competition &#10;</tspan><tspan x="4894" y="2445.14">&#x2014; Grand Prize, Sejong Center  &#10;</tspan><tspan x="4894" y="2484.14">&#10;</tspan><tspan x="4894" y="2523.14">2021 Jungnangcheon Media Fa&#xe7;ade&#10;</tspan><tspan x="4894" y="2562.14"> &#x2014; 25-episode series, Seoul Metropolitan Government  &#10;</tspan><tspan x="4894" y="2601.14">&#10;</tspan><tspan x="4894" y="2640.14">Shinsegae Department Store Daejeon &#10;</tspan><tspan x="4894" y="2679.14">&#x2014; display installation  &#10;</tspan><tspan x="4894" y="2718.14">&#10;</tspan><tspan x="4894" y="2757.14">2020 Design Art Fair, Seoul Arts Center  Hanwha 70th </tspan><tspan x="4894" y="2796.14">Anniversary &#10;</tspan><tspan x="4894" y="2835.14">&#x2014; TV &#38; newspaper campaign &#10;</tspan><tspan x="4894" y="2874.14">&#10;</tspan><tspan x="4894" y="2913.14"> 2019 Carder Garden &#10;</tspan><tspan x="4894" y="2952.14">&#x2014; music video</tspan></text>
+<text id="CV" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="5239" y="1253.55">CV&#10;</tspan></text>
+<rect id="-&gt;start_5" width="219" height="161" transform="matrix(-1 0 0 1 5734 3115)" fill="url(#pattern30_3857_1518)"/>
+<text id="-&gt;home_4" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5624" y="3332.27">&#x2192;home</tspan></text>
+<rect id="image 1" x="4566" y="3042" width="909" height="553" fill="url(#pattern31_3857_1518)"/>
+<text id="Cony (Lee Geonhee, b. 1988) is a media artist, composer and AI researcher based in Korea. Trained as a painter, Cony builds looping video works from AI-generated imagery, hand painting and original music, set inside the blue screen of a crashed computer." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="4759" y="1388.14">Cony (Lee Geonhee, b. 1988) is a media artist, composer and AI </tspan><tspan x="4759" y="1427.14">researcher based in Korea.&#10;</tspan><tspan x="4759" y="1466.14">Trained as a painter, Cony builds looping video works from AI-</tspan><tspan x="4759" y="1505.14">generated imagery, hand painting&#10;</tspan><tspan x="4759" y="1544.14">and original music, set inside the blue screen of a crashed computer.</tspan></text>
+<text id="-&gt;pig_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5276" y="3642.27">&#x2192;pig</tspan></text>
+</g>
+<g id="Fishing">
+<text id="Fishing_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="14033" y="4987.91">Fishing</tspan></text>
+<rect id="home04" x="14158" y="6403" width="247" height="181" fill="url(#pattern32_3857_1518)"/>
+<text id="-&gt;home_5" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="14234" y="6626.27">&#x2192;home</tspan></text>
+<text id="Loading..." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="36" letter-spacing="0em"><tspan x="14053" y="5740.09">Loading...</tspan></text>
+</g>
+<g id="contact">
+<text id="Contact" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="7121" y="8843.91">Contact</tspan></text>
+<rect id="home04_2" x="6863" y="9521" width="247" height="181" fill="url(#pattern33_3857_1518)"/>
+<text id="-&gt;home_6" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6939" y="9744.27">&#x2192;home</tspan></text>
+<rect id="-&gt;contact_2" x="6986" y="9702" width="1282" height="857" fill="url(#pattern34_3857_1518)"/>
+<text id="exhibitions · commissions · press conyww@gmail.com YouTube @conyca Instagram @conylog" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7075" y="8958.14">exhibitions &#xb7; commissions &#xb7; press &#10;</tspan><tspan x="7075" y="8997.14">conyww@gmail.com  &#10;</tspan><tspan x="7075" y="9036.14">YouTube      @conyca &#10;</tspan><tspan x="7075" y="9075.14">Instagram    @conylog</tspan></text>
+<rect id="image 10" x="7033" y="9252" width="968" height="134" fill="url(#pattern35_3857_1518)"/>
+</g>
+<g id="Group 1">
+<rect id="-&gt; pig youtube" x="5199" y="8400" width="1266" height="710" fill="url(#pattern36_3857_1518)"/>
+<text id="-&gt;pig_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5832" y="9102.27">&#x2192;pig</tspan></text>
+</g>
+<g id="Group 2">
+<rect id="-&gt;idle youtube_2" x="5481" y="7301" width="2467.8" height="588.477" fill="url(#pattern37_3857_1518)"/>
+<text id="-&gt;idle" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="6609.86" y="7940.79">&#x2192;idle</tspan></text>
+</g>
+<g id="Daydreaming" clip-path="url(#clip0_3857_1518)">
+<text id="Daydreaming_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="12916" y="5041.91">Daydreaming</tspan></text>
+<rect id="home03" x="13149" y="6450" width="247" height="181" fill="url(#pattern38_3857_1518)"/>
+<text id="-&gt;home_7" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="13225" y="6673.27">&#x2192;home</tspan></text>
+<text id="Loading..._2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="36" letter-spacing="0em"><tspan x="13153" y="5740.09">Loading...</tspan></text>
+</g>
 
-    <!-- Video Modal -->
-    <div class="video-modal" id="videoModal">
-        <div class="modal-overlay" onclick="closeModal()"></div>
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">×</button>
-            <div class="video-container">
-                <iframe id="youtubePlayer" 
-                    src="" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
-            </div>
-        </div>
-    </div>
 
-    <!-- Footer -->
-    <div class="credits">
-        © 2025 Cony
-    </div>
-    
-    <!-- Background Music -->
-    <audio id="bgMusic" src="bgmusic.mp3" preload="auto" loop></audio>
+<g id="work">
+<rect id="-&gt;work_2" x="7242" y="1140" width="188" height="204" fill="url(#pattern43_3857_1518)"/>
+<text id="Work" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="7288" y="1418.55">Work&#10;</tspan></text>
+<text id="2025" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="7273" y="2685.55">2025</tspan></text>
+<text id="2024_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="7268" y="3084.55">2024</tspan></text>
+<text id="2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="7263" y="2289.55">2026</tspan></text>
+<text id="-&gt;daydreaming" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7204" y="2575.64">&#x2192;daydreaming</tspan></text>
+<text id="-&gt;54" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7281" y="2883.64">&#x2192;54</tspan></text>
+<text id="-&gt;Ai.exe" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7263" y="2756.64">&#x2192;Ai.exe</tspan></text>
+<text id="-&gt;Reverie" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7247" y="2822.64">&#x2192;Reverie</tspan></text>
+<text id="-&gt;Fishing" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7257" y="2505.64">&#x2192;Fishing</tspan></text>
+<text id="work-&gt;idle" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7266" y="2365.64">&#x2192;idle</tspan></text>
+<text id="-&gt;Pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7278" y="2435.64">&#x2192;Pig</tspan></text>
+<text id="-&gt;Conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="7257" y="3146.64">&#x2192;Conix</tspan></text>
+<rect id="-&gt;start_6" x="7486" y="3303" width="247" height="181" fill="url(#pattern44_3857_1518)"/>
+<text id="-&gt;home_10" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7562" y="3526.27">&#x2192;home</tspan></text>
+<rect id="-&gt;sotrmax youtube" x="6817" y="3225" width="603" height="650" fill="url(#pattern45_3857_1518)"/>
+<text id="The blue screen is a fatal error. A forced stop. The moment a system can no longer hold itself together. To most people, it means loss — unsaved data, a frozen machine, digital death. But the same blue is also an empty page. A space that owes nothing to what came before it. The end and the beginning sit right next to each other, and the blue screen is exactly that seam. I treat that blue as a place to work. Inside it, I make videos: AI-generated images drifting through the void, paired with music written as loops that never resolve. None of these images have an original. They are copies of things that were never real to begin with — pictures of nothing, pretending to be something. And I paint on it. Not the blue itself — the things that float in front of it. Figures lifted from paintings that were never painted, eyes, birds, flowers, a cake. The screen pretends to be a window into another world. The canvas pretends to be a screen. Two illusions, facing each other, with the same blue between them. One space, approached from two sides." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="6840" y="1514.14">The blue screen is a fatal error. A forced stop. The moment a </tspan><tspan x="6840" y="1553.14">system can no longer hold itself together. To most people, it means </tspan><tspan x="6840" y="1592.14">loss &#x2014; unsaved data, a frozen machine, digital death.&#10;</tspan><tspan x="6840" y="1631.14">But the same blue is also an empty page. A space that owes </tspan><tspan x="6840" y="1670.14">nothing to what came before it. The end and the beginning sit right </tspan><tspan x="6840" y="1709.14">next to each other, and the blue screen is exactly that seam.&#10;</tspan><tspan x="6840" y="1748.14">I treat that blue as a place to work. Inside it, I make videos: AI-</tspan><tspan x="6840" y="1787.14">generated images drifting through the void, paired with music </tspan><tspan x="6840" y="1826.14">written as loops that never resolve. None of these images have an </tspan><tspan x="6840" y="1865.14">original. They are copies of things that were never real to begin with </tspan><tspan x="6840" y="1904.14">&#x2014; pictures of nothing, pretending to be something.&#10;</tspan><tspan x="6840" y="1943.14">And I paint on it. Not the blue itself &#x2014; the things that float in front of </tspan><tspan x="6840" y="1982.14">it. Figures lifted from paintings that were never painted, eyes, birds, </tspan><tspan x="6840" y="2021.14">flowers, a cake. The screen pretends to be a window into another </tspan><tspan x="6840" y="2060.14">world. The canvas pretends to be a screen. Two illusions, facing </tspan><tspan x="6840" y="2099.14">each other, with the same blue between them. One space, </tspan><tspan x="6840" y="2138.14">approached from two sides.</tspan></text>
+<text id="-&gt;softmax_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7105" y="3913.27">&#x2192;softmax</tspan></text>
+</g>
+<g id="Group 3">
+<rect id="ssfwe 1" x="10069" y="1860" width="662" height="594" fill="url(#pattern46_3857_1518)"/>
+<rect id="-&gt;idle youtube_3" x="8530" y="1826" width="3241" height="1739" fill="url(#pattern47_3857_1518)"/>
+<text id="-&gt;idle_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="9461" y="3575.27">&#x2192;idle</tspan></text>
+</g>
+<g id="Ai.exe">
+<rect id="-&gt;ai.exe youtube" x="3609" y="5592" width="518" height="774" fill="url(#pattern48_3857_1518)"/>
+<text id="Ai.exe_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="96" letter-spacing="0em"><tspan x="3755" y="5491.91">Ai.exe</tspan></text>
+<text id="AI.exe: Dante&#x27;s Fall_9&#x27;13&quot;_Single-channel video_Loop_2025" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="3309" y="6565.55">AI.exe: Dante&#39;s Fall_9&#39;13&#34;_Single-channel video_Loop_2025</tspan></text>
+<text id="ISEA 2026 Dubai Direction, Video, Music, AI Curation — Cony  Software: Logic Pro, Final Cut Pro, Grok" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3741.78" y="6639.14">ISEA 2026 Dubai&#10;</tspan><tspan x="3533.16" y="6678.14">Direction, Video, Music, AI Curation &#x2014; Cony&#xa0;&#10;</tspan><tspan x="3570.03" y="6717.14">Software: Logic Pro, Final Cut Pro, Grok</tspan></text>
+<text id="AI.exe: Dante&#x27;s Fall, Single-channel Video Still, 04&#x27;10&#x27;&#x27; - The Two Executors: Subversive Laughter against the System._AI Generated, Layered Sensory Synthesis." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="24" letter-spacing="0em"><tspan x="3426" y="9286.23">AI.exe: Dante&#39;s Fall, Single-channel Video Still, 04&#39;10&#39;&#39; - The Two Executors: </tspan><tspan x="3426" y="9315.23">Subversive Laughter against the System._AI Generated, Layered Sensory </tspan><tspan x="3426" y="9344.23">Synthesis.</tspan></text>
+<text id="AI.exe: Dante&#x27;s Fall, Installation View Draft, Immersive Dark Box with Central &#x27;Executor&#x27;s Oasis&#x27; (Giant Bean Bags)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="24" letter-spacing="0em"><tspan x="3436" y="9957.23">AI.exe: Dante&#39;s Fall, Installation View Draft, Immersive Dark Box with Central </tspan><tspan x="3436" y="9986.23">&#39;Executor&#39;s Oasis&#39; (Giant Bean Bags)</tspan></text>
+<text id="The title states a technical fact. The extension ‘.exe&#x27; means executable — but an executable cannot run itself. No matter how sophisticated the algorithm, without a human double-clicking, it remains dead code floating in digital space. The essence of the AI era lies not in the technology, but in the human will that executes it. The work follows the structure of Dante&#x27;s Inferno, descending vertically toward the center of the system. It begins in a dark forest. Faces appear and disappear. Birds circle. A subject without direction. The scenes that follow expose fragments of modern systemic chaos — cars passing rapidly, factories emitting smoke, figures whispering, expressions of grief and indifference in quick succession. Then the video passes through seasons without music. Only field recordings remain as AI-generated figures inhabit their own narratives. Then it leads to an unreal landscape where the system’s gravity disappears — crowds walking above clouds, scenes ascending toward the sky. At the end of the gaze of two men symbolizing systemic surveillance, the screen turns to blue. In computing, blue means fatal error. Complete termination. But just before the loop restarts, the two men abandon their cold expressions and laugh like children, playing together. The system is dead. They are not. The screen of failure is subverted into a space of play by the executor&#x27;s will. AI.exe is stopped. What will you output? The mouse is now in your hands." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3401" y="6935.14">The title states a technical fact. The extension &#x2018;.exe&#39; means </tspan><tspan x="3401" y="6974.14">executable &#x2014; but an executable cannot run itself. No matter how </tspan><tspan x="3401" y="7013.14">sophisticated the algorithm, without a human double-clicking, it </tspan><tspan x="3401" y="7052.14">remains dead code floating in digital space. The essence of the </tspan><tspan x="3401" y="7091.14">AI era lies not in the technology, but in the human will that </tspan><tspan x="3401" y="7130.14">executes it.&#10;</tspan><tspan x="3401" y="7169.14">The work follows the structure of Dante&#39;s Inferno, descending </tspan><tspan x="3401" y="7208.14">vertically toward the center of the system. It begins in a dark </tspan><tspan x="3401" y="7247.14">forest. Faces appear and disappear. Birds circle. A subject </tspan><tspan x="3401" y="7286.14">without direction.&#10;</tspan><tspan x="3401" y="7325.14">The scenes that follow expose fragments of modern systemic </tspan><tspan x="3401" y="7364.14">chaos &#x2014; cars passing rapidly, factories emitting smoke, figures </tspan><tspan x="3401" y="7403.14">whispering, expressions of grief and indifference in quick </tspan><tspan x="3401" y="7442.14">succession. Then the video passes through seasons without </tspan><tspan x="3401" y="7481.14">music. Only field recordings remain as AI-generated figures </tspan><tspan x="3401" y="7520.14">inhabit their own narratives.&#10;</tspan><tspan x="3401" y="7559.14">Then it leads to an unreal landscape where the system&#x2019;s gravity </tspan><tspan x="3401" y="7598.14">disappears &#x2014; crowds walking above clouds, scenes ascending </tspan><tspan x="3401" y="7637.14">toward the sky. At the end of the gaze of two men symbolizing </tspan><tspan x="3401" y="7676.14">systemic surveillance, the screen turns to blue. In computing, </tspan><tspan x="3401" y="7715.14">blue means fatal error. Complete termination. But just before the </tspan><tspan x="3401" y="7754.14">loop restarts, the two men abandon their cold expressions and </tspan><tspan x="3401" y="7793.14">laugh like children, playing together. The system is dead. They </tspan><tspan x="3401" y="7832.14">are not.&#10;</tspan><tspan x="3401" y="7871.14">The screen of failure is subverted into a space of play by the </tspan><tspan x="3401" y="7910.14">executor&#39;s will. AI.exe is stopped. What will you output? The </tspan><tspan x="3401" y="7949.14">mouse is now in your hands.</tspan></text>
+<rect id="image 6" x="3423" y="8731" width="929" height="522" fill="url(#pattern49_3857_1518)"/>
+<rect id="image 8" x="3422" y="9397" width="930" height="523" fill="url(#pattern50_3857_1518)"/>
+<rect id="-&gt;start_7" width="258" height="189" transform="matrix(-1 0 0 1 4469 10485)" fill="url(#pattern51_3857_1518)"/>
+<text id="-&gt;home_11" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4309" y="10715.3">&#x2192;home</tspan></text>
+<rect id="ai.exe 1" x="2991" y="10414" width="1220" height="895" fill="url(#pattern52_3857_1518)"/>
+<text id="AI.exe: Dante&#x27;s Fall, Single-channel Video Still, 00&#x27;00&#x27;&#x27; - &#x27;Selva Oscura&#x27; (Dark Forest) Initiation._AI Generated, Layered Sensory Synthesis." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="24" letter-spacing="0em"><tspan x="3429" y="8632.23">AI.exe: Dante&#39;s Fall, Single-channel Video Still, 00&#39;00&#39;&#39; - &#39;Selva Oscura&#39; (Dark </tspan><tspan x="3429" y="8661.23">Forest) Initiation._AI Generated, Layered Sensory Synthesis.</tspan></text>
+<rect id="Ai.exe-0003 2 1" x="3429" y="8077" width="929" height="522" fill="url(#pattern53_3857_1518)"/>
+<text id="-&gt;ai.exe youtube_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3683" y="6814.14"> youtu.be/sqpTtHn77H0</tspan></text>
+<text id="-&gt;ai.exe_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="3833" y="6411.27">&#x2192;ai.exe</tspan></text>
+<text id="-&gt;ai. exe" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="3521" y="10607.3">&#x2192;ai. exe</tspan></text>
+</g>
+<rect id="-&gt;softmax youtube" x="4811" y="4817" width="555" height="360" fill="url(#pattern54_3857_1518)"/>
+<rect id="qqfe12 1" x="1516" y="2931" width="1892" height="1270" fill="url(#pattern55_3857_1518)"/>
+</g>
+<defs>
+<pattern id="pattern0_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image0_3857_1518" transform="scale(0.0015625 0.00136294)"/>
+</pattern>
+<pattern id="pattern1_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image1_3857_1518" transform="scale(0.0025644 0.00134048)"/>
+</pattern>
+<pattern id="pattern2_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image2_3857_1518" transform="matrix(0.00211872 0 0 0.00215517 -0.22884 0)"/>
+</pattern>
+<pattern id="pattern3_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_3857_1518" transform="matrix(0.000510204 0 0 0.000904795 0 -0.000351865)"/>
+</pattern>
+<pattern id="pattern4_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image4_3857_1518" transform="scale(0.000490677 0.000605327)"/>
+</pattern>
+<pattern id="pattern5_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image5_3857_1518" transform="scale(0.00193424 0.00202878)"/>
+</pattern>
+<pattern id="pattern6_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern7_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image7_3857_1518" transform="scale(0.00145349 0.00215523)"/>
+</pattern>
+<pattern id="pattern8_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image8_3857_1518" transform="matrix(0.00105752 0 0 0.00290698 -0.00073452 0)"/>
+</pattern>
+<pattern id="pattern9_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image9_3857_1518" transform="scale(0.0005556 0.00140449)"/>
+</pattern>
+<pattern id="pattern10_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image10_3857_1518" transform="scale(0.000550055 0.000523223)"/>
+</pattern>
+<pattern id="pattern11_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image11_3857_1518" transform="scale(0.000413223 0.000696379)"/>
+</pattern>
+<pattern id="pattern12_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image12_3857_1518" transform="scale(0.000572738 0.000495126)"/>
+</pattern>
+<pattern id="pattern13_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern14_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image13_3857_1518" transform="scale(0.000520833 0.00185185)"/>
+</pattern>
+<pattern id="pattern15_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image14_3857_1518" transform="scale(0.000520833 0.00185185)"/>
+</pattern>
+<pattern id="pattern16_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image15_3857_1518" transform="scale(0.000520833 0.00185185)"/>
+</pattern>
+<pattern id="pattern17_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image16_3857_1518" transform="matrix(0.000520833 0 0 0.00185277 0 -0.000248806)"/>
+</pattern>
+<pattern id="pattern18_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image17_3857_1518" transform="scale(0.00052107 0.00185185)"/>
+</pattern>
+<pattern id="pattern19_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="matrix(0.00173611 0 0 0.00237624 0 -0.00138695)"/>
+</pattern>
+<pattern id="pattern20_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image18_3857_1518" transform="scale(0.00095511 0.00146678)"/>
+</pattern>
+<pattern id="pattern21_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image19_3857_1518" transform="matrix(0.00320513 0 0 0.00226994 0 -0.000522852)"/>
+</pattern>
+<pattern id="pattern22_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image20_3857_1518" transform="matrix(0.00159236 0 0 0.00221501 0 -0.00059203)"/>
+</pattern>
+<pattern id="pattern23_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image21_3857_1518" transform="scale(0.0015748 0.00151305)"/>
+</pattern>
+<pattern id="pattern24_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image22_3857_1518" transform="matrix(0.00156131 0 0 0.00143472 -0.000400878 0)"/>
+</pattern>
+<pattern id="pattern25_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image23_3857_1518" transform="matrix(0.000856932 0 0 0.00127551 -0.000448241 0)"/>
+</pattern>
+<pattern id="pattern26_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image24_3857_1518" transform="matrix(0.000977517 0 0 0.00333812 0 -0.000717539)"/>
+</pattern>
+<pattern id="pattern27_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image25_3857_1518" transform="matrix(0.00110188 0 0 0.00164745 -0.00025397 0)"/>
+</pattern>
+<pattern id="pattern28_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image26_3857_1518" transform="matrix(0.0021763 0 0 0.00247525 -0.000550055 0)"/>
+</pattern>
+<pattern id="pattern29_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image19_3857_1518" transform="scale(0.00320513 0.00226778)"/>
+</pattern>
+<pattern id="pattern30_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="matrix(0.00174208 0 0 0.00236967 -0.00172044 0)"/>
+</pattern>
+<pattern id="pattern31_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image27_3857_1518" transform="matrix(0.000666667 0 0 0.00109584 0 -0.000251356)"/>
+</pattern>
+<pattern id="pattern32_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern33_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern34_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image25_3857_1518" transform="scale(0.00110132 0.00164748)"/>
+</pattern>
+<pattern id="pattern35_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image28_3857_1518" transform="scale(0.000516529 0.00373134)"/>
+</pattern>
+<pattern id="pattern36_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image29_3857_1518" transform="scale(0.000789889 0.00140845)"/>
+</pattern>
+<pattern id="pattern37_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image30_3857_1518" transform="scale(0.000648088 0.00271778)"/>
+</pattern>
+<pattern id="pattern38_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern39_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern40_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image31_3857_1518" transform="scale(0.000643715 0.00116822)"/>
+</pattern>
+<pattern id="pattern41_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern42_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image32_3857_1518" transform="scale(0.000712338 0.000707214)"/>
+</pattern>
+<pattern id="pattern43_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image22_3857_1518" transform="matrix(0.00156006 0 0 0.0014377 0 -0.00104004)"/>
+</pattern>
+<pattern id="pattern44_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern45_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image33_3857_1518" transform="scale(0.00245098 0.00227376)"/>
+</pattern>
+<pattern id="pattern46_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image34_3857_1518" transform="scale(0.00193424 0.00215566)"/>
+</pattern>
+<pattern id="pattern47_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image35_3857_1518" transform="scale(0.000601528 0.00112108)"/>
+</pattern>
+<pattern id="pattern48_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image36_3857_1518" transform="matrix(0.00088258 0 0 0.000590667 -0.000423046 0)"/>
+</pattern>
+<pattern id="pattern49_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image37_3857_1518" transform="scale(0.000260146 0.00046298)"/>
+</pattern>
+<pattern id="pattern50_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image38_3857_1518" transform="scale(0.000520833 0.000926147)"/>
+</pattern>
+<pattern id="pattern51_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_3857_1518" transform="scale(0.00173611 0.00236993)"/>
+</pattern>
+<pattern id="pattern52_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image39_3857_1518" transform="scale(0.000730994 0.000996439)"/>
+</pattern>
+<pattern id="pattern53_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image40_3857_1518" transform="matrix(0.000520833 0 0 0.000926924 0 -0.000538793)"/>
+</pattern>
+<pattern id="pattern54_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image41_3857_1518" transform="matrix(0.00120482 0 0 0.00185743 0 -0.000577309)"/>
+</pattern>
+<pattern id="pattern55_3857_1518" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image42_3857_1518" transform="scale(0.000856183 0.00127551)"/>
+</pattern>
+<clipPath id="clip0_3857_1518">
+<rect width="1080" height="1920" fill="white" transform="translate(12680 4809)"/>
+</clipPath>
+<clipPath id="clip1_3857_1518">
+<rect width="1079" height="4299" fill="white" transform="translate(13817 7619)"/>
+</clipPath>
+<image id="image0_3857_1518" data-name="Reverie.png" width="640" height="734" preserveAspectRatio="none" href="img/image0.webp"/>
+<image id="image1_3857_1518" data-name="sfqee.png" width="390" height="746" preserveAspectRatio="none" href="img/image1.webp"/>
+<image id="image2_3857_1518" data-name="grok-video-79b15dc8-a716-4614-b165-da06dc25ad2b-0001.png" width="688" height="464" preserveAspectRatio="none" href="img/image2.webp"/>
+<image id="image3_3857_1518" data-name="image.png" width="1960" height="1106" preserveAspectRatio="none" href="img/image3.webp"/>
+<image id="image4_3857_1518" data-name="image.png" width="2038" height="1652" preserveAspectRatio="none" href="img/image4.webp"/>
+<image id="image5_3857_1518" data-name="fqge.png" width="517" height="493" preserveAspectRatio="none" href="img/image5.webp"/>
+<image id="image6_3857_1518" data-name="sdqfaaa.png" width="576" height="422" preserveAspectRatio="none" href="img/image6.webp"/>
+<image id="image7_3857_1518" data-name="grok-video-069e7e7e-fe8a-4905-8458-21ac5be437c4-0003.png" width="688" height="464" preserveAspectRatio="none" href="img/image7.webp"/>
+<image id="image8_3857_1518" data-name="&#225;&#132;&#133;&#225;&#133;&#166;&#225;&#132;&#139;&#225;&#133;&#181;&#225;&#132;&#139;&#225;&#133;&#165; 0.png" width="947" height="344" preserveAspectRatio="none" href="img/image8.webp"/>
+<image id="image9_3857_1518" data-name="&#225;&#132;&#133;&#225;&#133;&#166;&#225;&#132;&#139;&#225;&#133;&#181;&#225;&#132;&#139;&#225;&#133;&#165; 3.png" width="1800" height="712" preserveAspectRatio="none" href="img/image9.webp"/>
+<image id="image10_3857_1518" data-name="image.png" width="1818" height="1912" preserveAspectRatio="none" href="img/image10.webp"/>
+<image id="image11_3857_1518" data-name="image.png" width="2420" height="1436" preserveAspectRatio="none" href="img/image11.webp"/>
+<image id="image12_3857_1518" data-name="image.png" width="1746" height="2020" preserveAspectRatio="none" href="img/image12.webp"/>
+<image id="image13_3857_1518" data-name="brick factory 1-0008.png" width="1920" height="540" preserveAspectRatio="none" href="img/image13.webp"/>
+<image id="image14_3857_1518" data-name="brick factory 1-0014.png" width="1920" height="540" preserveAspectRatio="none" href="img/image14.webp"/>
+<image id="image15_3857_1518" data-name="brick factory 1-0012.png" width="1920" height="540" preserveAspectRatio="none" href="img/image15.webp"/>
+<image id="image16_3857_1518" data-name="brick factory 1-0003.png" width="1920" height="540" preserveAspectRatio="none" href="img/image16.webp"/>
+<image id="image17_3857_1518" data-name="brick factory 1-0002.png" width="1920" height="540" preserveAspectRatio="none" href="img/image17.webp"/>
+<image id="image18_3857_1518" data-name="sdqff.png" width="1047" height="682" preserveAspectRatio="none" href="img/image18.webp"/>
+<image id="image19_3857_1518" data-name="rabbit_youtube.png" width="312" height="441" preserveAspectRatio="none" href="img/image19.webp"/>
+<image id="image20_3857_1518" data-name="conyyyy.png" width="628" height="452" preserveAspectRatio="none" href="img/image20.webp"/>
+<image id="image21_3857_1518" data-name="qefe.png" width="635" height="661" preserveAspectRatio="none" href="img/image21.webp"/>
+<image id="image22_3857_1518" data-name="Papers_54.png" width="641" height="697" preserveAspectRatio="none" href="img/image22.webp"/>
+<image id="image23_3857_1518" data-name="c282812e-e35f-469c-96b9-accb7fc3b12f.png" width="1168" height="784" preserveAspectRatio="none" href="img/image23.webp"/>
+<image id="image24_3857_1518" data-name="&#225;&#132;&#133;&#225;&#133;&#166;&#225;&#132;&#139;&#225;&#133;&#181;&#225;&#132;&#139;&#225;&#133;&#165; 1 &#225;&#132;&#135;&#225;&#133;&#169;&#225;&#134;&#168;&#225;&#132;&#137;&#225;&#133;&#161;&#225;&#132;&#135;&#225;&#133;&#169;&#225;&#134;&#171;.png" width="1023" height="300" preserveAspectRatio="none" href="img/image24.webp"/>
+<image id="image25_3857_1518" data-name="geee.png" width="908" height="607" preserveAspectRatio="none" href="img/image25.webp"/>
+<image id="image26_3857_1518" data-name="sgrgwwq.png" width="460" height="404" preserveAspectRatio="none" href="img/image26.webp"/>
+<image id="image27_3857_1518" data-name="image.png" width="1500" height="913" preserveAspectRatio="none" href="img/image27.webp"/>
+<image id="image28_3857_1518" data-name="image.png" width="1936" height="268" preserveAspectRatio="none" href="img/image28.webp"/>
+<image id="image29_3857_1518" data-name="qqfe9.png" width="1266" height="710" preserveAspectRatio="none" href="img/image29.webp"/>
+<image id="image30_3857_1518" data-name="feqgqq.png" width="1543" height="368" preserveAspectRatio="none" href="img/image30.webp"/>
+<image id="image31_3857_1518" data-name="image.png" width="1554" height="856" preserveAspectRatio="none" href="img/image31.webp"/>
+<image id="image32_3857_1518" data-name="image.png" width="1404" height="1414" preserveAspectRatio="none" href="img/image32.webp"/>
+<image id="image33_3857_1518" data-name="sfgwrww.png" width="408" height="440" preserveAspectRatio="none" href="img/image33.webp"/>
+<image id="image34_3857_1518" data-name="ssfwe.png" width="517" height="464" preserveAspectRatio="none" href="img/image34.webp"/>
+<image id="image35_3857_1518" data-name="dgqge.png" width="1663" height="892" preserveAspectRatio="none" href="img/image35.webp"/>
+<image id="image36_3857_1518" data-name="artistic bio.png" width="1134" height="1693" preserveAspectRatio="none" href="img/image36.webp"/>
+<image id="image37_3857_1518" data-name="image.png" width="3844" height="2160" preserveAspectRatio="none" href="img/image37.webp"/>
+<image id="image38_3857_1518" data-name="image.png" width="1920" height="1080" preserveAspectRatio="none" href="img/image38.webp"/>
+<image id="image39_3857_1518" data-name="ai.exe.png" width="1368" height="1004" preserveAspectRatio="none" href="img/image39.webp"/>
+<image id="image40_3857_1518" data-name="Ai.exe-0003 2.png" width="1920" height="1080" preserveAspectRatio="none" href="img/image40.webp"/>
+<image id="image41_3857_1518" data-name="dqfgddd.png" width="830" height="539" preserveAspectRatio="none" href="img/image41.webp"/>
+<image id="image42_3857_1518" data-name="qqfe12.png" width="1168" height="784" preserveAspectRatio="none" href="img/image42.webp"/>
+</defs>
+</svg>
 
-    <script>
-        const subtitleArea = document.getElementById('subtitleArea');
-        const choiceArea = document.getElementById('choiceArea');
-        const videoArea = document.getElementById('videoArea');
-        const gameVideo = document.getElementById('gameVideo');
-        const videoModal = document.getElementById('videoModal');
-        const youtubePlayer = document.getElementById('youtubePlayer');
+<script>
+(() => {
+  const svg = document.getElementById('map');
+  const [ , , W, H] = svg.getAttribute('viewBox').split(' ').map(Number);   // world size in design units
+  const OLD = 'https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/';
+  const CHANNEL = 'https://www.youtube.com/@conyca';
+  const INSTA = 'https://www.instagram.com/conylog/';
 
-        // Modal functions
-        function openModal(videoUrl) {
-            youtubePlayer.src = videoUrl;
-            videoModal.classList.add('active');
-            document.body.style.overflow = 'hidden';
+  // ---------- videos (from the "youtube link" boards in Figma) ----------
+  const V = {
+    hum:         { t:'...hum',                                   ids:['yCPTT2HWdvk'] },
+    pig:         { t:'Pig',                                      ids:['IrTLmfbwePg'] },
+    idle:        { t:'Idle_Parinirvana',                         ids:['blA9iTVe8TI'] },
+    soak:        { t:'Fred again.. & SOAK — just stand there',   ids:['IOCjpTBeIjA'] },
+    softmax:     { t:'softmax',                                  ids:['iNObYr0SnUw'] },
+    aiexe:       { t:"AI.exe: Dante's Fall",                     ids:['sqpTtHn77H0'] },
+    daydreaming: { t:'Daydreaming',                              ids:['w6UZ7NvDK2I'] },
+    fishing:     { t:'Fishing',                                  ids:['yxRHQTA8Gwg'] },
+    c2024: { t:'Conix · 2024 Immersive Media Art Exhibition', ids:['6OpkB-lz9hk','nzmCq_-Nxlk','kCH97zbiE1c','S-TfLBCw6uo'] },
+    c2023: { t:'Conix · 2023 Eterno Cheongdam',                ids:['isNzzi5xa_I'] },
+    c2022: { t:'Conix · 2022 Gwanghwamun Media Façade',        ids:['TuihqC3i9so'] },
+    c2021: { t:'Conix · 2021 Jungnangcheon Media Façade',      ids:['PM5W47_SsBk'] },
+    c2020: { t:'Conix · 2020 Design Art Fair · Hanwha',        ids:['T--U8d66kik','WrPnNnTwQzQ','cqnSwPXFdDc'] },
+    c2019: { t:'Conix · 2019 Carder Garden',                   ids:['8W_nrbswn4k'] }
+  };
+
+  // ---------- where each named layer goes ----------
+  const ROOMS = ['start','cv','work','contact','Ai.exe','pig','idle','conix','Fishing','Daydreaming'];
+  const LINKS = {
+    // start
+    '->insta':   { url:INSTA, label:'Instagram' },
+    '->cony youtube': { url:CHANNEL, label:'YouTube channel' }, '->youtube': { url:CHANNEL, label:'YouTube channel' },
+    '->work':    { room:'work' },    '->Work':    { room:'work' },
+    '->contact': { room:'contact' }, '->Contact': { room:'contact' },
+    'start_cv':  { room:'cv' },      '->CV':      { room:'cv' },
+    '->conix':   { room:'conix' },
+    // work list
+    'work->idle':    { room:'idle' },
+    '->Pig':         { room:'pig' },
+    '->Fishing':     { room:'Fishing' },
+    '->daydreaming': { room:'Daydreaming' },
+    '->Ai.exe':      { room:'Ai.exe' },
+    '->Conix':       { room:'conix' },
+    '->Reverie':     { url: OLD + 'Reverie.pdf', label:'Reverie (PDF)' },
+    '->54':          { url: OLD + 'timeline.html', label:'54' },
+    // contact
+    '->contact_2':   { url:'mailto:conyww@gmail.com', label:'Email' },
+    // videos
+    '->hum youtube': { v:'hum' }, '->...hum': { v:'hum' },
+    '->pig youtube': { v:'pig' }, '->pig youtube_2': { v:'pig' }, '-> pig youtube': { v:'pig' },
+    '->pig': { v:'pig' }, '->pig_2': { v:'pig' }, '->pig_3': { v:'pig' },
+    '->idle youtube': { v:'idle' }, '->idle youtube_2': { v:'idle' }, '->idle youtube_3': { v:'idle' },
+    '->idle': { v:'idle' }, '->idle_3': { v:'idle' },
+    '-> soak youtube': { v:'soak' },
+    '->softmax youtube': { v:'softmax' }, '->sotrmax youtube': { v:'softmax' }, '->softmax': { v:'softmax' }, '->softmax_3': { v:'softmax' },
+    '->ai.exe youtube': { v:'aiexe' }, '->ai.exe youtube_2': { v:'aiexe' }, '->ai.exe_2': { v:'aiexe' },
+    'ai.exe 1': { v:'aiexe' }, '->ai. exe': { v:'aiexe' },
+    'Daydreaming_2': { v:'daydreaming' }, 'Loading..._2': { v:'daydreaming' },
+    'Fishing_2': { v:'fishing' }, 'Loading...': { v:'fishing' }
+  };
+  const isHome = id => /^->(start|home)(_\d+)?$/.test(id) || /^home0\d(_\d+)?$/.test(id);
+
+  const tag = (el, a, label) => {
+    el.dataset.act = JSON.stringify(a);
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', a.v ? 'button' : 'link');
+    el.setAttribute('aria-label', label || a.label || (a.v ? V[a.v].t : a.room) || 'Home');
+  };
+  svg.querySelectorAll('[id]').forEach(el => {
+    const id = el.getAttribute('id');
+    let a = LINKS[id];
+    if (!a && id.startsWith('->Fred again')) a = { v:'soak' };
+    if (!a && isHome(id)) a = { home:true, label:'Home' };
+    if (a) tag(el, a);
+  });
+  // Conix room: each year opens that year's videos
+  document.querySelectorAll('#conix text').forEach(t => {
+    const y = /^\s*(20(19|2[0-4]))/.exec(t.textContent);
+    if (y && V['c' + y[1]]) tag(t, { v:'c' + y[1] });
+  });
+  // single lines inside text blocks
+  const LINE_LINKS = [
+    [/conyww@gmail\.com/, { url:'mailto:conyww@gmail.com', label:'Email' }],
+    [/YouTube\s+@conyca/, { url:CHANNEL, label:'YouTube channel' }],
+    [/Instagram\s+@conylog/, { url:INSTA, label:'Instagram' }]
+  ];
+  svg.querySelectorAll('tspan').forEach(t => {
+    for (const [re, a] of LINE_LINKS) if (re.test(t.textContent)) { t.dataset.act = JSON.stringify(a); t.setAttribute('role', 'link'); }
+  });
+
+  // ---------- room rectangles ----------
+  const rooms = {}; window.__rooms = rooms;
+  function measureRooms() {
+    const inv = svg.getScreenCTM().inverse();
+    const wb = el => {                      // element box in world units, transforms included
+      const r = el.getBoundingClientRect(); if (!r.width) return null;
+      const a = new DOMPoint(r.left, r.top).matrixTransform(inv), z = new DOMPoint(r.right, r.bottom).matrixTransform(inv);
+      return { x:a.x, y:a.y, width:z.x - a.x, height:z.y - a.y };
+    };
+    ROOMS.forEach(id => {
+      const g = document.getElementById(id); if (!g) return;
+      const clip = g.getAttribute('clip-path');
+      if (clip) {
+        const r = svg.querySelector(clip.slice(4, -1) + ' rect');
+        const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(r.getAttribute('transform') || '');
+        rooms[id] = { x:+m[1], y:+m[2], w:+r.getAttribute('width'), h:+r.getAttribute('height') };
+        return;
+      }
+      let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+      [...g.children].forEach(c => {
+        const b = wb(c); if (!b || b.width > 1250) return;   // skip things spilling out on purpose
+        x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+      });
+      const cx = (x0 + x1) / 2, w = Math.max(1080, x1 - x0 + 40);
+      rooms[id] = { x: cx - w/2, y: y0 - 110, w, h: Math.max(1920, y1 - y0 + 180) };
+    });
+  }
+
+  // ---------- camera: x,y = world point at the top-left of the screen, s = screen px per unit ----------
+  const cam = { x:0, y:0, s:0.1 };
+  const vw = () => innerWidth, vh = () => innerHeight;
+  const apply = () => svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw()/cam.s} ${vh()/cam.s}`);
+  const minS = () => Math.min(vw()/W, vh()/H) * 0.6, maxS = 3;
+  const clampS = s => Math.max(minS(), Math.min(maxS, s));
+
+  function roomView(id) {
+    const r = rooms[id]; const pad = 1.04;
+    const s = Math.min(vw() / (r.w * pad), vh() / 1920);
+    const x = r.x + r.w/2 - vw()/s/2;
+    const showH = Math.min(r.h, 1920);
+    const y = vh()/s > showH ? r.y + showH/2 - vh()/s/2 : r.y;
+    return { x, y, s };
+  }
+  function worldView() {
+    const s = Math.min(vw()/W, vh()/H) * 0.96;
+    return { s, x: W/2 - vw()/s/2, y: H/2 - vh()/s/2 };
+  }
+
+  let raf = 0, here = 'start';
+  const eyes = document.getElementById('eyes');
+  const setHere = h => { here = h; eyes.setAttribute('aria-label', h === 'start' ? 'See the whole world' : 'Back to start'); };
+  function go(t, anim = true) {
+    cancelAnimationFrame(raf);
+    if (!anim || matchMedia('(prefers-reduced-motion: reduce)').matches) { Object.assign(cam, t); apply(); return; }
+    const f = { ...cam }, t0 = performance.now();
+    const fc = { x: f.x + vw()/f.s/2, y: f.y + vh()/f.s/2 }, tc = { x: t.x + vw()/t.s/2, y: t.y + vh()/t.s/2 };
+    const dist = Math.hypot(tc.x - fc.x, tc.y - fc.y) * Math.min(f.s, t.s);
+    const dur = Math.min(1400, 650 + dist * 0.25);
+    const ease = k => k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3) / 2;
+    const dip = Math.min(0.55, dist / 4000);   // pull back a little on long trips so you see where you're going
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = ease(k);
+      const s = Math.exp(Math.log(f.s) + (Math.log(t.s) - Math.log(f.s)) * e - dip * Math.sin(Math.PI * e));
+      const cx = fc.x + (tc.x - fc.x) * e, cy = fc.y + (tc.y - fc.y) * e;
+      cam.s = s; cam.x = cx - vw()/s/2; cam.y = cy - vh()/s/2; apply();
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  const toRoom = (id, anim = true) => { if (!rooms[id]) return; setHere(id); go(roomView(id), anim); };
+  const toWorld = () => { setHere(null); go(worldView()); };
+  const home = () => (here === 'start' ? toWorld() : toRoom('start'));
+  eyes.addEventListener('click', home);
+
+  // ---------- video window ----------
+  const player = document.getElementById('player'), screen = document.getElementById('screen');
+  const ttl = document.getElementById('ttl'), yt = document.getElementById('yt');
+  const nav = document.getElementById('nav'), count = document.getElementById('count');
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  let list = null, idx = 0, lastFocus = null, openedAt = 0;
+  function show(i) {
+    idx = i; const id = list.ids[i];
+    screen.innerHTML = '';
+    const f = document.createElement('iframe');
+    f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+    f.title = list.t; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+    screen.appendChild(f);
+    ttl.textContent = list.t; yt.href = 'https://youtu.be/' + id;
+    const many = list.ids.length > 1;
+    nav.classList.toggle('on', many);
+    if (many) { count.textContent = `${i + 1} / ${list.ids.length}`; prev.disabled = i === 0; next.disabled = i === list.ids.length - 1; }
+  }
+  function openVideo(key) {
+    list = V[key]; if (!list) return;
+    lastFocus = document.activeElement;
+    player.classList.add('on'); openedAt = Date.now(); show(0);
+    player.querySelector('[data-close]').focus();
+  }
+  function closeVideo() {
+    if (!player.classList.contains('on')) return false;
+    player.classList.remove('on'); screen.innerHTML = ''; list = null;
+    lastFocus?.focus?.(); return true;
+  }
+  player.addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) closeVideo();
+    else if (e.target === player && Date.now() - openedAt > 500) closeVideo();   // ignore the tap that opened it
+  });
+  prev.addEventListener('click', () => idx > 0 && show(idx - 1));
+  next.addEventListener('click', () => list && idx < list.ids.length - 1 && show(idx + 1));
+  player.addEventListener('wheel', e => e.stopPropagation(), { passive:true });
+
+  function openUrl(url) {
+    if (url.startsWith('mailto:')) { location.href = url; return; }
+    const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function act(a) {
+    if (a.url) return;                        // external links open from the click handler (a trusted tap)
+    if (a.v) openVideo(a.v);
+    else if (a.room) toRoom(a.room);
+    else if (a.home) home();
+  }
+
+  // ---------- input: drag to move, pinch / ctrl+wheel to zoom, wheel to scroll ----------
+  const pts = new Map(); let start = null, moved = 0, pinch = null, lastTap = 0, tapped = null;
+  const toWorldPt = (px, py) => ({ x: cam.x + px / cam.s, y: cam.y + py / cam.s });
+  function zoomAt(px, py, f) {
+    const p = toWorldPt(px, py), s = clampS(cam.s * f);
+    cam.s = s; cam.x = p.x - px / s; cam.y = p.y - py / s; apply();
+  }
+  svg.addEventListener('pointerdown', e => {
+    svg.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    cancelAnimationFrame(raf);
+    if (pts.size === 1) { start = { x:e.clientX, y:e.clientY, cx:cam.x, cy:cam.y, target:e.target.closest('[data-act]') }; moved = 0; }
+    if (pts.size === 2) { const [a,b] = [...pts.values()]; pinch = { d:Math.hypot(a.x-b.x, a.y-b.y), s:cam.s }; start = null; }
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pts.size === 2 && pinch) {
+      const [a,b] = [...pts.values()];
+      zoomAt((a.x+b.x)/2, (a.y+b.y)/2, (pinch.s * Math.hypot(a.x-b.x, a.y-b.y) / pinch.d) / cam.s);
+      return;
+    }
+    if (start) {
+      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      moved = Math.max(moved, Math.hypot(dx, dy));
+      if (moved > 6) { svg.classList.add('drag'); cam.x = start.cx - dx / cam.s; cam.y = start.cy - dy / cam.s; apply(); }
+    }
+  });
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0) {
+      svg.classList.remove('drag');
+      if (start && moved <= 6) {
+        if (start.target) { tapped = start.target; act(JSON.parse(start.target.dataset.act)); }
+        else { const now = Date.now(); if (now - lastTap < 320) toRoom('start'); lastTap = now; }  // double-tap the blue = back to start
+      }
+      start = null;
+    }
+  };
+  svg.addEventListener('click', () => {
+    const el = tapped; if (!el) return;   // pointer capture can retarget click, so use what was tapped
+    tapped = null;
+    const a = JSON.parse(el.dataset.act); if (a.url) openUrl(a.url);
+  });
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+  svg.addEventListener('wheel', e => {
+    e.preventDefault(); cancelAnimationFrame(raf);
+    if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+    else { const k = e.deltaMode === 1 ? 32 : 1; cam.x += e.deltaX * k / cam.s; cam.y += e.deltaY * k / cam.s; apply(); }
+  }, { passive:false });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (!closeVideo()) toRoom('start'); return; }
+    if (player.classList.contains('on')) {
+      if (e.key === 'ArrowRight' && list && idx < list.ids.length - 1) show(idx + 1);
+      if (e.key === 'ArrowLeft' && idx > 0) show(idx - 1);
+      return;
+    }
+    const a = document.activeElement?.dataset?.act;
+    if ((e.key === 'Enter' || e.key === ' ') && a) { e.preventDefault(); const o = JSON.parse(a); o.url ? openUrl(o.url) : act(o); }
+  });
+  let rz = 0;
+  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => here ? toRoom(here, false) : go(worldView(), false), 120); });
+
+
+  // ---------- start ----------
+  let booted = false;
+  function boot() {
+    if (booted) return; booted = true; measureRooms(); toRoom('start', false);
+  }
+  apply();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
+  setTimeout(boot, 1500);
+})();
+</script>
+
+<button id="lang" type="button" aria-label="Language"><span data-l="en">EN</span> / <span data-l="ko">KR</span></button>
+<script>
+(() => {
+  // Korean text for each English block, keyed by the start of the English text.
+  // mode 'wrap' re-flows the Korean to the width of the English block; 'lines' swaps line by line.
+  const KO = [
+    // ---------- conix ----------
+    ["Conix is a video technique I developed in 2020", "Conix는 내가 2020년에 만든 영상 기법이다. 영상의 모든 프레임을 디지털 붓질로 다시 그려 회화로 바꾸고, 1초에 6장씩 재생한다. 붓 터치가 한 장 한 장 보이면서도 화면이 살아 움직이는 속도다. 여기에 직접 만든 느린 앰비언트 음악을 더해, 보는 동안 시간이 조금 느리게 흐르게 한다. 이 기법으로 광화문 미디어아트 공모전 대상을 받았고, 서울시, 세종문화회관, 신세계, 한화, KT, MBC와 작업했다."],
+    ["2024 Immersive Media Art Exhibition — Heyri", "2024 이머시브 미디어아트 전시\n— 파주 헤이리"],
+    ["2023 Eterno Cheongdam — outdoor", "2023 에테르노 청담\n— 옥외 사이니지"],
+    ["2022 Gwanghwamun Media Façade Competition — Grand", "2022 광화문 미디어파사드 공모전\n— 대상, 세종문화회관"],
+    ["2021 Jungnangcheon Media Façade — 25", "2021 중랑천 미디어파사드\n— 25편 시리즈, 서울시"],
+    ["2020 Design Art Fair, Seoul Arts Center Hanwha 70th Anniversary — TV", "2020 디자인아트페어, 예술의전당 · 한화 창립 70주년\n— TV·신문 광고"],
+    ["2019 Carder Garden — music", "2019 카더가든\n— 뮤직비디오"],
+
+    // ---------- pig ----------
+    ["In Pig, love blooms from that same blue void", "Pig에서 사랑은 같은 파란 허공에서 피어난다. AI가 만든 인물들, 한 번도 그려진 적 없는 그림들, 새와 꽃. 무엇에도 원본은 없다. 그런데도 따뜻하다. 음악도 반복되고, 영상도 반복된다. 파랑에는 끝이 없다. 사랑도 그렇다."],
+    ["Pig is the second movement of the AI.exe series", "Pig는 AI.exe 시리즈의 두 번째 악장이다. 첫 번째 악장 《AI.exe: 단테의 추락》(ISEA 2026 두바이)은 디지털 지옥으로 수직 하강해 시스템 크래시로 끝났다. Pig는 바로 그 종말의 지평선에서 시작한다.\n\n작품은 블루 안에서 펼쳐진다. 고전적인 초상, 벌새, 하얀 프리지아, 치즈케이크 조각. AI가 만든 환영들이 화면을 떠다닌다. 이것들은 내가 LLM 연구에서 발견한 기계의 환각 현상, Reverie의 산물이다. 나는 Grok 모델이 프롬프트의 의도에서 벗어난 순간, 예측할 수 없는 글리치만을 골라 기계의 실패와 인간의 감정 사이를 잇는다. 우리는 예측할 수 없는 순간에 가장 깊이 반응한다.\n\n사운드트랙은 퓨처 베이스와 신스팝이 섞인 미드템포 곡으로, 이음새 없는 루프로 흐른다. 강한 사이드체인 컴프레션이 심장 박동 같은 맥박을 만든다. 소리와 이미지는 같은 파란 허공 속에서 함께 숨 쉰다.\n\n사실 이것은 사랑의 기록이다. 떠다니는 아이콘들은 내가 사랑하는 사람이 사랑하는 것들이다. 그녀는 돼지띠다. 십이지의 마지막 동물. 풍요와 쾌락, 환상과 자비의 동물.\n\n블루스크린은 모든 것이 끝나는 곳이다. 그러나 새로운 순환이 시작되는 곳이기도 하다."],
+
+    // ---------- idle ----------
+    ["Idle_Parinirvana is the third movement", "\n\nIdle_Parinirvana는 AI.exe 시리즈의 세 번째 악장이다. 첫 번째 악장 《AI.exe: 단테의 추락》(ISEA 2026 두바이)은 디지털 지옥으로 수직 하강해 시스템 크래시로 끝났다. 두 번째 악장 《Pig》는 그 종말의 지평선에서 사랑의 기록으로 피어났다. 세 번째 악장에서는 모두가 눕는다.\n\n작품은 블루 안에서 펼쳐진다. 라텍스와 선글라스, 명품을 걸친 몸들, 웃는 거구의 남자, 호랑이, 마스티프. 온갖 존재들이 하나의 자세로 쉬고 있다. 오른쪽으로 누워 한 손으로 머리를 받친 자세. 서양 회화에서 이 자세는 오달리스크, 보는 이의 욕망을 받아내는 몸이다. 동양에서 같은 자세는 열반에 들기 직전의 와불, 모든 욕망으로부터의 마지막 해방이다. 하나의 자세가 욕망과 그 끝을 동시에 가리킨다. 가장 욕망스러운 몸들이 가장 욕망 없는 자세를 하고 있다.\n\n몸은 움직이지 않는다. 눈만 천천히 좌우로 떠돈다. 잠든 것도, 떠난 것도 아니다. 전시에서는 손그림 아이콘이 담긴 블루 이미지가 가운데 서고, 양옆의 넓은 화면에서 인물들이 동시에 재생된다. 32:9로 길게 늘어난 화면은 동남아시아의 거대한 와불처럼 공간을 채운다.\n\n사운드트랙은 클로드 드뷔시의 〈Rêverie(몽상)〉(1890)다. 기계가 프롬프트의 의도에서 벗어나는 순간, 내가 LLM 연구에서 Reverie라고 이름 붙인 현상과 같은 이름이다. 느린 피아노가 멈춘 몸들 위로 흐르고, 소리와 이미지는 같은 블루 안에서 함께 꿈꾼다.\n\n옛 열반도에서 동물들은 부처의 마지막을 지켜보려 모여들었다. 여기서는 그 구경꾼들이 부처의 자리에 누웠다. 모두가 같은 방식으로, 같은 블루 안에서, 기다린다.\n\nIdle은 켜져 있지만 아무것도 실행하지 않는 기계의 상태를 부르는 말이다. 블루스크린은 모든 것이 종료되는 곳이다. 그 직전, 모든 것은 idle 상태다."],
+
+    // ---------- cv ----------
+    ["Cony (Lee Geonhee, b. 1988) is a media artist", "코니(이건희, 1988년생)는 한국에서 활동하는 미디어 아티스트, 작곡가, AI 리서처다. 회화를 전공했고, AI 생성 이미지와 손으로 그린 회화, 직접 만든 음악을 멈춰버린 컴퓨터의 블루스크린 안에서 끝없이 반복되는 영상으로 엮는다."],
+    ["Cony, b. 1988 Media artist", "코니, 1988년생\n미디어 아티스트 / 작곡가 / AI 리서처\n학력 중앙대학교 서양화과 졸업\n\n2026 ISEA2026 두바이, 학술 프로그램\n— 《AI.exe: 단테의 추락》\n— 「Reverie」 (연구 논문)\n\n토마토 케첩 피크닉\n— 아트 디렉션 & 비주얼, 24시간 야외 레이브\n\n2024 이머시브 미디어아트 전시\n— 파주 헤이리\n\n2023 에테르노 청담\n— 옥외 사이니지\n\n2022 광화문 미디어파사드 공모전\n— 대상, 세종문화회관\n\n2021 중랑천 미디어파사드\n— 25편 시리즈, 서울시\n\n신세계백화점 대전점\n— 디스플레이 설치\n\n2020 디자인아트페어, 예술의전당 · 한화 창립 70주년\n— TV·신문 광고\n\n2019 카더가든\n— 뮤직비디오"],
+
+    // ---------- work ----------
+    ["The blue screen is a fatal error", "블루스크린은 치명적 오류다. 강제 정지. 시스템이 더 이상 자기 자신을 지탱할 수 없는 순간. 대부분의 사람들에게 그것은 상실을 뜻한다. 저장되지 않은 데이터, 멈춰버린 기계, 디지털 죽음.\n그러나 같은 파란색은 동시에 빈 페이지다. 그 이전에 있던 것에 아무것도 빚지지 않는 공간. 끝과 시작이 바로 옆에 나란히 놓여 있고, 블루스크린은 정확히 그 이음매다.\n나는 그 파란색을 작업하는 자리로 삼는다. 그 안에서 영상을 만든다. AI가 생성한 이미지들이 공허를 떠다니고, 해소되지 않는 루프로 쓰인 음악과 함께 흐른다. 이 이미지들 중 어느 것도 원본이 없다. 애초에 진짜였던 적 없는 것들의 복제, 아무것도 아닌 것의 그림이 무언가인 척하는 것이다.\n그리고 나는 그 위에 그린다. 파란색 자체가 아니라 그 앞에 떠 있는 것들을. 한 번도 그려진 적 없는 그림에서 떼어낸 인물들, 눈, 새, 꽃, 케이크. 화면은 다른 세계로 향하는 창문인 척한다. 캔버스는 화면인 척한다. 같은 파란색을 사이에 두고 마주 보는 두 개의 환상. 양쪽에서 다가가는 하나의 공간."],
+
+    // ---------- Ai.exe ----------
+    ["ISEA 2026 Dubai Direction", "ISEA 2026 두바이\n연출, 영상, 음악, AI 큐레이션 — 코니\n소프트웨어: Logic Pro, Final Cut Pro, Grok"],
+    ["The title states a technical fact", "제목은 기술적 사실을 말한다. 확장자 '.exe'는 실행 파일을 뜻한다. 그러나 실행 파일은 스스로 실행될 수 없다. 알고리즘이 아무리 정교해도 인간이 더블클릭하지 않으면 디지털 공간을 떠도는 죽은 코드일 뿐이다. AI 시대의 본질은 기술이 아니라 그것을 실행하는 인간의 의지에 있다.\n작품은 단테의 《신곡》 지옥편의 구조를 따라 시스템의 중심을 향해 수직으로 내려간다. 시작은 어두운 숲이다. 얼굴들이 나타났다 사라지고, 새들이 맴돈다. 방향을 잃은 주체.\n이어지는 장면들은 현대 시스템의 혼돈을 조각조각 드러낸다. 빠르게 지나가는 자동차, 연기를 내뿜는 공장, 속삭이는 인물들, 슬픔과 무관심의 표정이 잇따라 스친다. 그다음 영상은 음악 없이 계절을 통과한다. AI가 만든 인물들이 저마다의 이야기 속에 머무는 동안 현장음만 남는다.\n그리고 시스템의 중력이 사라진 비현실의 풍경에 닿는다. 구름 위를 걷는 군중, 하늘로 오르는 장면들. 시스템의 감시를 상징하는 두 남자의 시선 끝에서 화면은 파랗게 변한다. 컴퓨터에서 파랑은 치명적 오류, 완전한 종료를 뜻한다. 그러나 루프가 다시 시작되기 직전, 두 남자는 차가운 표정을 버리고 아이처럼 웃으며 논다. 시스템은 죽었다. 그들은 아니다.\n실패의 화면은 실행자의 의지로 놀이의 공간이 된다. AI.exe는 멈췄다. 당신은 무엇을 출력할 것인가? 이제 마우스는 당신 손에 있다."],
+    ["AI.exe: Dante's Fall, Single-channel Video Still, 04", "《AI.exe: 단테의 추락》 싱글채널 영상 스틸, 04'10'' — 두 실행자: 시스템에 맞서는 전복적 웃음. AI 생성, 겹겹의 감각 합성."],
+    ["AI.exe: Dante's Fall, Single-channel Video Still, 00", "《AI.exe: 단테의 추락》 싱글채널 영상 스틸, 00'00'' — '어두운 숲(Selva Oscura)', 시작. AI 생성, 겹겹의 감각 합성."],
+    ["AI.exe: Dante's Fall, Installation View Draft", "《AI.exe: 단테의 추락》 설치 전경 초안. 가운데 '실행자의 오아시스'(대형 빈백)가 놓인 몰입형 다크 박스."],
+
+    // ---------- small bits ----------
+    ["Loading...", "준비 중...", 'lines'],
+    ["exhibitions · commissions · press", "전시 · 커미션 · 프레스", 'first']
+  ];
+
+  const svg = document.getElementById('map');
+  const norm = s => s.replace(/\s+/g, ' ').trim();
+  const NS = 'http://www.w3.org/2000/svg';
+  const blocks = [];
+  svg.querySelectorAll('text').forEach(t => {
+    const en = norm(t.textContent);
+    const hit = KO.find(([k]) => en.startsWith(norm(k)));
+    if (hit) blocks.push({ t, ko: hit[1], mode: hit[2] || 'wrap', html: t.innerHTML });
+  });
+
+  // measure the English layout once, then re-flow Korean into the same box
+  function layout(b) {
+    if (b.box) return b.box;
+    const sp = [...b.t.querySelectorAll('tspan')];
+    const ys = sp.map(s => +s.getAttribute('y')), xs = sp.map(s => +s.getAttribute('x'));
+    const ws = sp.map(s => s.getComputedTextLength());
+    const lh = ys.length > 1 ? Math.min(...ys.slice(1).map((y, i) => y - ys[i]).filter(d => d > 0)) : (+b.t.getAttribute('font-size') || 32) * 1.22;
+    const centered = new Set(xs.map(x => Math.round(x))).size > 1;
+    const cx = xs.reduce((a, x, i) => a + x + ws[i] / 2, 0) / xs.length;
+    return (b.box = { x0: Math.min(...xs), y0: ys[0], lh, width: Math.max(...ws, 200), centered, cx });
+  }
+  function wrapKo(b) {
+    const { x0, y0, lh, width, centered, cx } = layout(b);
+    const t = b.t; t.innerHTML = '';
+    t.style.fontFamily = "'Noto Sans KR', 'Inter', sans-serif";
+    const probe = document.createElementNS(NS, 'tspan'); t.appendChild(probe);
+    const measure = s => { probe.textContent = s; return probe.getComputedTextLength(); };
+    const lines = [];
+    b.ko.split('\n').forEach(par => {
+      if (!par.trim()) { lines.push(''); return; }
+      let line = '';
+      par.split(' ').forEach(word => {
+        const tryL = line ? line + ' ' + word : word;
+        if (line && measure(tryL) > width * 1.02) { lines.push(line); line = word; } else line = tryL;
+      });
+      lines.push(line);
+    });
+    t.removeChild(probe);
+    lines.forEach((l, i) => {
+      const s = document.createElementNS(NS, 'tspan');
+      s.setAttribute('y', y0 + i * lh);
+      if (centered) { s.setAttribute('x', cx); s.setAttribute('text-anchor', 'middle'); } else s.setAttribute('x', x0);
+      s.textContent = l || ' ';
+      t.appendChild(s);
+    });
+  }
+  function apply(lang) {
+    blocks.forEach(b => {
+      if (lang === 'ko') {
+        layout(b);
+        if (b.mode === 'wrap') wrapKo(b);
+        else {
+          const sp = b.t.querySelectorAll('tspan');
+          if (b.mode === 'lines') sp.forEach((s, i) => s.textContent = b.ko.split('\n')[i] ?? '');
+          else sp[0].textContent = b.ko;
+          b.t.style.fontFamily = "'Noto Sans KR', 'Inter', sans-serif";
         }
+      } else { b.t.innerHTML = b.html; b.t.style.fontFamily = ''; }
+    });
+    document.documentElement.lang = lang;
+    document.querySelectorAll('#lang [data-l]').forEach(s => s.classList.toggle('on', s.dataset.l === lang));
+    document.getElementById('lang').setAttribute('aria-label', lang === 'ko' ? 'Switch to English' : '한국어로 보기');
+    try { localStorage.setItem('cony-lang', lang); } catch (e) {}
+    cur = lang;
+  }
+  let cur = 'en';
+  let saved = null; try { saved = localStorage.getItem('cony-lang'); } catch (e) {}
+  const first = saved || ((navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en');
+  document.getElementById('lang').addEventListener('click', () => apply(cur === 'ko' ? 'en' : 'ko'));
+  // wait for both fonts before measuring
+  const ready = document.fonts ? Promise.all([document.fonts.load('32px "Noto Sans KR"', '가'), document.fonts.load('32px Inter', 'a')]).catch(() => {}) : Promise.resolve();
+  ready.then(() => apply(first));
+})();
+</script>
 
-        function closeModal() {
-            videoModal.classList.remove('active');
-            youtubePlayer.src = '';
-            document.body.style.overflow = '';
-        }
-
-        // ESC 키로 모달 닫기
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && videoModal.classList.contains('active')) {
-                closeModal();
-            }
-        });
-
-        const YOUTUBE_URL = "https://youtube.com/@conyca?si=t19YccJ7cFmYJE9X";
-        const TIMELINE_URL = "https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/timeline.html";
-
-        // 영상 목록
-        const videos = ['video1.mp4', 'video2.mp4', 'video3.mp4', 'video4.mp4', 'video5.mp4', 'video6.mp4', 'video7.mp4', 'video9.mp4', 'video10.mp4', 'video11.mp4', 'video12.mp4', 'video13.mp4', 'video14.mp4', 'video15.mp4', 'grok1.mp4', 'grok2.mp4', 'grok3.mp4', 'grok4.mp4', 'grok5.mp4'];
-        let shuffledVideos = [];
-        let videoIndex = 0;
-
-        // 배열 섞기
-        function shuffle(array) {
-            const arr = [...array];
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-            return arr;
-        }
-
-        // 다음 영상 재생
-        function playNextVideo() {
-            if (videoIndex >= shuffledVideos.length) {
-                // 전체 재생 완료 → 다시 섞어서 루프
-                shuffledVideos = shuffle(videos);
-                videoIndex = 0;
-            }
-            gameVideo.src = shuffledVideos[videoIndex];
-            gameVideo.play();
-            videoIndex++;
-        }
-
-        // 영상 끝나면 다음 영상
-        gameVideo.addEventListener('ended', playNextVideo);
-
-        // 자막 시퀀스
-        const subtitles = [
-            { lines: ["Hello. I am Dolores.", "I am the administrator of this page."], duration: 3000 },
-            { lines: ["This place will soon heal and", "renew your body and mind."], duration: 3000 },
-            { lines: ["For a moment, escape all anxiety,", "pain, and emptiness..."], duration: 3000 },
-            { lines: ["Free your soul,", "and discover your true self."], duration: 3000 },
-            { lines: ["[Oh dear! Oh dear!", "I shall be too late!]"], duration: 2500, class: "rabbit" },
-            { lines: ["Follow the white rabbit?"], duration: 99999, showChoice: true }
-        ];
-
-        let currentIndex = 0;
-
-        function showSubtitle(index) {
-            if (index >= subtitles.length) return;
-
-            const sub = subtitles[index];
-            subtitleArea.innerHTML = '';
-
-            sub.lines.forEach(line => {
-                const p = document.createElement('p');
-                p.className = 'subtitle-line' + (sub.class ? ' ' + sub.class : '');
-                p.textContent = line;
-                subtitleArea.appendChild(p);
-                
-                setTimeout(() => p.classList.add('visible'), 100);
-            });
-
-            // y/n 선택을 자막처럼 표시
-            if (sub.showChoice) {
-                const choiceLine = document.createElement('p');
-                choiceLine.className = 'subtitle-line choice-line';
-                choiceLine.innerHTML = '<span id="choiceY">y</span> / <span id="choiceN">n</span>';
-                subtitleArea.appendChild(choiceLine);
-                setTimeout(() => choiceLine.classList.add('visible'), 100);
-
-                // 클릭 이벤트 다시 연결
-                setTimeout(() => {
-                    document.getElementById('choiceY').addEventListener('click', handleY);
-                    document.getElementById('choiceN').addEventListener('click', handleN);
-                }, 200);
-            } else {
-                setTimeout(() => {
-                    currentIndex++;
-                    showSubtitle(currentIndex);
-                }, sub.duration);
-            }
-        }
-
-        function handleY() {
-            subtitleArea.innerHTML = '<p class="subtitle-line visible">Starting...</p>';
-            
-            // 배경음악 재생
-            const bgMusic = document.getElementById('bgMusic');
-            bgMusic.play();
-            
-            setTimeout(() => {
-                subtitleArea.style.display = 'none';
-                document.getElementById('doloresVideo').style.display = 'none';
-                videoArea.classList.add('visible');
-                shuffledVideos = shuffle(videos);
-                videoIndex = 0;
-                playNextVideo();
-            }, 1000);
-        }
-
-        function handleN() {
-            subtitleArea.innerHTML = '<p class="subtitle-line visible">Maybe next time...</p>';
-        }
-
-        // 아이콘 클릭 이벤트
-        const icons = document.querySelectorAll('.desktop-icon');
-        
-        icons.forEach(icon => {
-            icon.addEventListener('click', () => {
-                if (icon.id === 'icon-youtube') {
-                    window.open(YOUTUBE_URL, '_blank');
-                } else if (icon.id === 'icon-54') {
-                    window.open(TIMELINE_URL, '_blank');
-                } else if (icon.id === 'icon-reverie') {
-                    alert('Coming Soon...');
-                } else if (icon.id === 'icon-obs') {
-                    openModal('https://www.youtube.com/embed/nCNqrHzwjno?autoplay=1');
-                } else if (icon.id === 'icon-bio') {
-                    alert("안녕, Cony야. 아티스트이자 개발자. AI가 예상 밖의 행동을 보일 때 기록하고, 분석하고, 작품으로 만들어. 54일간의 관찰 기록 \"Reverie\"와 AI 의존성을 다룬 \"Ai.exe\", Coming Soon. 궁금하면 구경해 🐇\n\nHi, I'm Cony. Artist and developer. When AI behaves unexpectedly, I document it, analyze it, and turn it into art. \"Reverie\" (54 days of observation) and \"Ai.exe\" (about AI dependency), Coming Soon. Curious? Take a look 🐇");
-                } else if (icon.id === 'icon-terminal') {
-                    window.open('https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/', '_blank');
-                } else if (icon.id === 'icon-contact') {
-                    window.location.href = 'mailto:conyww@gmail.com';
-                } else if (icon.id === 'icon-claude') {
-                    window.open('https://claude.ai', '_blank');
-                } else if (icon.id === 'icon-loop') {
-                    window.open('https://soundcloud.com/conyca/sets/shopping', '_blank');
-                }
-            });
-        });
-
-        // 시작
-        setTimeout(() => showSubtitle(0), 1000);
-    </script>
 </body>
 </html>
