@@ -529,6 +529,10 @@
     if (!a && isHome(id)) a = { home:true, label:'Home' };
     if (a) tag(el, a);
   });
+  // home buttons sit under big images in a few rooms: bring them to the front so they stay tappable
+  svg.querySelectorAll('[data-act]').forEach(el => {
+    if (JSON.parse(el.dataset.act).home) el.parentNode.appendChild(el);
+  });
   // Conix room: each year opens that year's videos
   document.querySelectorAll('#conix text').forEach(t => {
     const y = /^\s*(20(19|2[0-4]))/.exec(t.textContent);
