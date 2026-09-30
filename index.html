@@ -489,6 +489,7 @@
     '->work':    { room:'work' },    '->Work':    { room:'work' },
     '->contact': { room:'contact' }, '->Contact': { room:'contact' },
     'start_cv':  { room:'cv' },      '->CV':      { room:'cv' },
+    'start_cony': { game:true, label:'Play East Blue' },
     '->conix':   { room:'conix' },
     // work list
     'work->idle':    { room:'idle' },
@@ -664,8 +665,18 @@
     const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
     document.body.appendChild(a); a.click(); a.remove();
   }
+  // CONY -> East Blue: everything fades into the plain blue, then the rabbit's world loads
+  function enterGame() {
+    const f = document.createElement('div');
+    f.style.cssText = 'position:fixed;inset:0;z-index:50;background:var(--blue);opacity:0;transition:opacity .5s ease;pointer-events:none';
+    document.body.appendChild(f);
+    requestAnimationFrame(() => { f.style.opacity = '1'; });
+    setTimeout(() => { location.href = 'eastblue/'; }, 520);
+    addEventListener('pageshow', e => { if (e.persisted) f.remove(); }, { once:true });
+  }
   function act(a) {
     if (a.url) return;                        // external links open from the click handler (a trusted tap)
+    if (a.game) { enterGame(); return; }
     if (a.v) openVideo(a.v);
     else if (a.room) toRoom(a.room);
     else if (a.home) home();

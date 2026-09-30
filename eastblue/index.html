@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="East Blue — a white rabbit wandering an endless blue. A game by Cony.">
+<meta property="og:title" content="East Blue">
+<meta property="og:description" content="A white rabbit wandering an endless blue. A game by Cony.">
+<meta name="theme-color" content="#082CFB">
+<link rel="icon" href="../favicon.png">
+<title>East Blue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Gloock&display=swap">
+<style>
+/* Layout: one full-bleed chroma-blue canvas; HUD in the corners, tuning drawer bottom-right, touch pads on phones */
+:root{
+  --blue:#041aee;
+  --deep:#0212b8;
+  --white:#ffffff;
+  --ink:#2a2e5c;
+  --dim:rgba(42,46,92,.62);
+  --line:rgba(255,255,255,.28);
+  --display:"Gloock", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+html,body{height:100%}
+body{margin:0;background:#082CFB;color:var(--white);overflow:hidden;font-family:var(--mono)}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 14px);display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none}
+.hud h1{color:var(--ink);margin:0;font-family:var(--display);font-weight:400;font-size:clamp(20px,3.2vw,30px);line-height:1;letter-spacing:.01em}
+.hud .sub{margin-top:7px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.meter{font-size:11px;letter-spacing:.08em;text-align:right;color:var(--dim);font-variant-numeric:tabular-nums}
+.meter b{display:block;font-size:22px;font-weight:600;color:var(--ink)}
+.state{position:fixed;left:16px;padding:4px 8px;background:rgba(20,28,80,.55);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);font-size:11px;letter-spacing:.08em;color:var(--dim);font-variant-numeric:tabular-nums;pointer-events:none}
+.tune{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);font-size:12px;max-width:calc(100% - 32px)}
+.tune summary{cursor:pointer;list-style:none;text-align:right;display:inline-block;float:right;padding:4px 10px!important;background:rgba(20,28,80,.55);color:var(--white)!important;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:var(--dim);padding:6px 0}
+.tune summary::-webkit-details-marker{display:none}
+.tune summary:focus-visible{outline:2px solid var(--white);outline-offset:3px}
+.tune[open] summary{color:var(--white)}
+.tune .panel{display:grid;gap:10px;padding:14px;margin-top:6px;background:var(--deep);border:1px solid var(--line);width:260px;max-width:100%}
+.tune label{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;font-size:11px;letter-spacing:.04em}
+.tune label output{font-variant-numeric:tabular-nums;color:var(--dim)}
+.tune input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--white)}
+.tune button{justify-self:start;font:inherit;font-size:11px;letter-spacing:.06em;color:var(--white);background:transparent;border:1px solid var(--line);padding:5px 10px;cursor:pointer}
+.tune button:focus-visible{outline:2px solid var(--white);outline-offset:2px}
+.pads{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 56px);display:none;justify-content:space-between;align-items:flex-end;pointer-events:none}
+.pads .grp{display:flex;gap:12px}
+.pad{pointer-events:auto;width:68px;height:68px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:rgba(2,18,184,.45);color:#fff;font:600 24px/1 var(--mono);display:grid;place-items:center;user-select:none;-webkit-user-select:none;touch-action:none}
+.pad.jump{width:84px;height:84px;font-size:14px;letter-spacing:.06em}
+.pad.on{background:rgba(255,255,255,.25)}
+@media (hover:none) and (pointer:coarse){.pads{display:none!important}}
+body:not(.dev) .hud,body:not(.dev) .state,body:not(.dev) .tune{display:none!important}
+#eyes{position:fixed;z-index:10;left:calc(14px + env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));
+  width:clamp(96px,11vw,150px);padding:6px;margin:-6px;line-height:0;-webkit-tap-highlight-color:transparent}
+#eyes img{width:100%;height:auto;display:block;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,40,.25));transition:transform .2s}
+@media (hover:hover){#eyes:hover img{transform:scale(1.06)}}
+#eyes:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#fade{position:fixed;inset:0;background:#082CFB;z-index:30;pointer-events:none;transition:opacity .6s ease}
+#fade.off{opacity:0}
+</style>
+</head>
+<body>
+
+<a id="eyes" href="../" aria-label="Back to Follow the White Rabbit"><img src="../img/eyes.webp" alt=""></a>
+<div id="fade"></div>
+<canvas id="stage" aria-label="East Blue 게임 화면"></canvas>
+<div class="hud">
+  <div>
+    <h1>East Blue</h1>
+    <div class="sub"><span class="keys">← → 이동 · SPACE 점프(공중에서 한 번 더) · SHIFT나 두 번 톡 질주 · ↓ 엎드리기 · 휠 줌</span></div>
+  </div>
+  <div class="meter" hidden>DISTANCE<b id="dist">0000 m</b></div>
+</div>
+<div class="state" id="state">IDLE</div>
+<details class="tune" id="tune">
+  <summary>튜닝</summary>
+  <div class="panel">
+    <label for="tSpeed">이동 속도<output id="oSpeed"></output><input id="tSpeed" type="range" min="200" max="900" step="10"></label>
+    <label for="tHop">깡총 템포<output id="oHop"></output><input id="tHop" type="range" min="30" max="84" step="1"></label>
+    <label for="tJump">점프 높이<output id="oJump"></output><input id="tJump" type="range" min="0.1" max="0.6" step="0.01"></label>
+    <label for="tTurn">방향 전환 속도<output id="oTurn"></output><input id="tTurn" type="range" min="16" max="70" step="1"></label>
+    <label for="tPause">깡총 사이 앉는 깊이<output id="oPause"></output><input id="tPause" type="range" min="0" max="0.6" step="0.01"></label>
+    <label for="tSprint">질주 속도<output id="oSprint"></output><input id="tSprint" type="range" min="1.4" max="3.2" step="0.1"></label>
+    <label for="tSprintFps">질주 다리 템포<output id="oSprintFps"></output><input id="tSprintFps" type="range" min="18" max="44" step="1"></label>
+    <button type="button" id="tReset">기본값으로</button>
+  </div>
+</details>
+<div class="pads">
+  <div class="grp">
+    <button class="pad" id="padL" aria-label="왼쪽으로 이동">←</button>
+    <button class="pad" id="padR" aria-label="오른쪽으로 이동">→</button>
+    <button class="pad" id="padD" aria-label="엎드리기">↓</button>
+  </div>
+  <button class="pad jump" id="padJ" aria-label="점프">JUMP</button>
+</div>
+
+<script>
+(()=>{
+// ================= sprite data =================
+const META={"ref": 359, "anims": {"idle": {"frames": 26, "cols": 8, "w": 302, "h": 264, "ax": 151.0, "ay": 258.5}, "look": {"frames": 14, "cols": 8, "w": 302, "h": 278, "ax": 151.0, "ay": 257.0}, "hop": {"frames": 47, "cols": 8, "w": 369, "h": 359, "ax": 184.5, "ay": 334.8}, "sprint": {"frames": 40, "cols": 8, "w": 501, "h": 282, "ax": 250.5, "ay": 270.0}, "scratch": {"frames": 45, "cols": 8, "w": 302, "h": 262, "ax": 151.0, "ay": 257.0}, "lie": {"frames": 43, "cols": 8, "w": 392, "h": 274, "ax": 196.0, "ay": 257.0}, "loaf": {"frames": 35, "cols": 8, "w": 348, "h": 289, "ax": 174.0, "ay": 257.0}}};
+const SPRITES=Object.keys(META.anims);
+const ZOOM=1/1.3;               // camera distance: 1 = the rabbit at its original size
+const HZ=()=>Math.min(H,W*1.1)*ZOOM;   // on a tall phone screen the width sets the rabbit's size
+const sheets={};let loadedCount=0;
+for(const n of SPRITES){const im=new Image();im.onload=()=>loadedCount++;im.src='sprites/'+n+'.webp';sheets[n]=im}
+const CRASH_START=150, CRASH_LEN=60;   // metres: winter night, then the world breaks into the blue screen
+
+// hop clip landmarks (24fps source)
+const HOP={prepFrom:5,push:10,air:15,apex:21,fall:24,touch:29,landEnd:31,settleEnd:46};
+// how much the body travels on each hop frame, so feet do not slide while planted
+const TRAVEL=f=>f<12?0.25:f<15?0.8:f<=27?1.45:f<=31?0.35:0.1;
+// look clip (turn frames): 0-3 side, 4-12 swinging to face the camera
+const TURN_SEQ=[3,5,7,8,9,10,11,12], TURN_SEQ_FAST=[4,7,9,11,12];
+// sprint clip: 0-15 sit -> first bound, 16-39 bounding loop
+const SPR={loop:16,len:24,compact:new Set([16,17,39])};
+// scratch clip: 0-28 foot up scratching, 29-44 back to sitting; lie clip: 0-15 down, 16-26 resting, 27-42 up
+const SCR={back:29,end:44}, LIE_FLAT={rest:16,restLen:11,up:27,end:42}, LOAF={rest:11,restLen:11,up:22,end:34};
+
+
+// ================= tuning =================
+const DEFAULTS={day:180,speed:540,hopFps:58,jump:0.3,turnFps:34,pause:0.15,sprint:1.5,sprintFps:30};
+let TUNE={...DEFAULTS};
+try{Object.assign(TUNE,JSON.parse(localStorage.getItem('rabbit-tune-v2')||'{}'))}catch(e){}
+const bindings=[['tSpeed','oSpeed','speed',v=>v+' px/s'],['tHop','oHop','hopFps',v=>(v/22).toFixed(1)+' 깡총/s'],
+  ['tJump','oJump','jump',v=>Math.round(v*100)+'%'],['tTurn','oTurn','turnFps',v=>(8/v).toFixed(2)+' s'],['tPause','oPause','pause',v=>Math.round(v/0.6*100)+'%'],['tSprint','oSprint','sprint',v=>'×'+v.toFixed(1)],['tSprintFps','oSprintFps','sprintFps',v=>v+' fps']];
+function syncTune(){for(const[i,o,k,f]of bindings){const el=document.getElementById(i);el.value=TUNE[k];document.getElementById(o).textContent=f(+TUNE[k])}}
+for(const[i,o,k,f]of bindings){document.getElementById(i).addEventListener('input',e=>{TUNE[k]=+e.target.value;syncTune();
+  try{localStorage.setItem('rabbit-tune-v2',JSON.stringify(TUNE))}catch(err){}})}
+document.getElementById('tReset').addEventListener('click',()=>{TUNE={...DEFAULTS};syncTune();try{localStorage.removeItem('rabbit-tune-v2')}catch(e){}});
+syncTune();
+
+
+// ================= canvas =================
+const cv=document.getElementById('stage'),ctx=cv.getContext('2d');
+let W=0,H=0,DPR=1;
+function resize(){DPR=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0)}
+addEventListener('resize',resize);resize();
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ================= input =================
+addEventListener('keydown',e=>{if(e.key==='t'||e.key==='T')document.body.classList.toggle('dev')});
+const keys={l:false,r:false,j:false,s:false,dn:false};let downPressed=false,jumpPressed=false,fastLatch=false;const lastTap={l:0,r:0};
+const K={ArrowDown:'dn',s:'dn',S:'dn',Shift:'s',ArrowLeft:'l',a:'l',A:'l',ArrowRight:'r',d:'r',D:'r',' ':'j',ArrowUp:'j',w:'j',W:'j'};
+addEventListener('keydown',e=>{const k=K[e.key];if(!k)return;if(e.target.closest&&e.target.closest('.tune'))return;e.preventDefault();
+  if(k==='j'&&!keys.j)jumpPressed=true;
+  if(k==='dn'&&!keys.dn)downPressed=true;
+  if((k==='l'||k==='r')&&!keys[k]&&!e.repeat){const now=performance.now();if(now-lastTap[k]<300)fastLatch=true;lastTap[k]=now}
+  keys[k]=true});
+addEventListener('keyup',e=>{const k=K[e.key];if(k)keys[k]=false;if(!keys.l&&!keys.r)fastLatch=false});
+addEventListener('blur',()=>{keys.l=keys.r=keys.j=keys.s=false;fastLatch=false});
+function bindPad(id,k){const el=document.getElementById(id);
+  const on=e=>{e.preventDefault();if(k==='j'&&!keys.j)jumpPressed=true;if(k==='dn'&&!keys.dn)downPressed=true;
+    if(k==='l'||k==='r'){const now=performance.now();if(now-lastTap[k]<320)fastLatch=true;lastTap[k]=now}
+    keys[k]=true;el.classList.add('on')};
+  const off=()=>{keys[k]=false;el.classList.remove('on');if(!keys.l&&!keys.r)fastLatch=false};
+  el.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(t=>el.addEventListener(t,off))}
+bindPad('padL','l');bindPad('padR','r');bindPad('padD','dn');bindPad('padJ','j');
+// touch: hold left/right half to walk, swipe up = jump, swipe down = lie down,
+// double-tap and hold = sprint, a second finger tap while walking = jump
+const touches=new Map();let lastTouch={side:0,t:0};
+let VZ=1,AZ=1,pinch=null;const clampZ=z=>Math.min(4,Math.max(1,z));
+function touchDist(){const p=[...touches.values()];return Math.hypot(p[0].cx-p[1].cx,p[0].cy-p[1].cy)||1}
+cv.addEventListener('wheel',e=>{e.preventDefault();VZ=clampZ(VZ*Math.exp(-e.deltaY*(e.ctrlKey?0.01:0.0015)))},{passive:false});
+function touchDir(){let l=false,r=false;for(const t of touches.values()){if(t.walk){if(t.side<0)l=true;else r=true}}keys.l=l;keys.r=r;if(!l&&!r)fastLatch=false}
+cv.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse')return;e.preventDefault();
+  const side=e.clientX<innerWidth/2?-1:1,now=performance.now();
+  const walking=[...touches.values()].some(t=>t.walk);
+  const t={x:e.clientX,y:e.clientY,cx:e.clientX,cy:e.clientY,t:now,side,walk:!walking,swiped:false};
+  if(walking){t.tapJump=true}
+  if(!walking&&lastTouch.side===side&&now-lastTouch.t<300)fastLatch=true;
+  lastTouch={side,t:now};touches.set(e.pointerId,t);
+  if(touches.size===2){for(const u of touches.values()){u.walk=false;u.tapJump=false;u.pinch=true}pinch={d0:touchDist(),z0:VZ};fastLatch=false}
+  touchDir();
+  try{cv.setPointerCapture(e.pointerId)}catch(err){}});
+cv.addEventListener('pointermove',e=>{const t=touches.get(e.pointerId);if(!t)return;t.cx=e.clientX;t.cy=e.clientY;
+  if(pinch&&touches.size===2){VZ=clampZ(pinch.z0*touchDist()/pinch.d0);return}
+  if(t.swiped||t.pinch)return;
+  const dy=e.clientY-t.y,dx=e.clientX-t.x;
+  if(Math.abs(dy)>40&&Math.abs(dy)>Math.abs(dx)*1.2){t.swiped=true;
+    if(dy<0)jumpPressed=true;else{downPressed=true;t.walk=false;touchDir()}}});
+function endTouch(e){const t=touches.get(e.pointerId);if(!t)return;
+  if(t.tapJump&&!t.swiped&&!t.pinch&&performance.now()-t.t<250)jumpPressed=true;
+  touches.delete(e.pointerId);if(touches.size<2)pinch=null;touchDir()}
+['pointerup','pointercancel'].forEach(n=>cv.addEventListener(n,endTouch));
+
+// ================= rabbit =================
+// states: idle, look, start, hop, settle, turn, prep, air, land
+const R={lieKind:'lie',wantLie:false,nextScratch:7,sf:0,fastAir:false,exiting:false,exitFrom:0,lp:'down',trail:[],doubled:false,dj:9,x:0,y:0,vx:0,vy:0,face:1,state:'idle',t:0,sheet:'idle',frame:0,still:0,
+  turnTo:0,turnFast:false,flipped:false,afterTurn:null,squash:0,squashT:1,lean:0};
+function go(state){R.state=state;R.t=0}
+function kick(a){R.squash=a;R.squashT=0}
+const particles=[];
+const prints=[];
+function dust(){}
+// feet touching the snow, measured from the sprites: per frame [x from body centre (sprite px), width]
+const CONTACT={"hop": [[[-40.5, 87], [63.5, 35]], [[-40.5, 87], [63.0, 36]], [[-40.5, 87], [63.0, 36]], [[-40.5, 87], [62.5, 37]], [[-41.0, 86], [62.0, 36]], [[-42.5, 87], [61.0, 36]], [[-44.0, 86], [59.5, 35]], [[-48.5, 83], [55.5, 31]], [[-50.5, 79], [53.5, 27]], [[-52.0, 74], [52.5, 21]], [[-54.5, 69], [53.5, 9]], [[-61.0, 54]], [[-62.5, 43]], [[-67.5, 37]], [[-74.5, 35]], [[-90.5, 25]], [[-100.0, 24]], [[-110.0, 22]], [[-118.0, 14]], [], [], [], [], [], [], [], [], [[78.0, 34]], [[74.0, 36]], [[70.0, 38]], [[67.0, 40]], [[61.0, 40]], [[58.0, 40]], [[56.5, 41]], [[-27.0, 12], [55.0, 40]], [[-21.0, 30], [54.0, 40]], [[-20.0, 32], [54.0, 40]], [[-20.5, 35], [54.5, 39]], [[-21.5, 37], [54.0, 38]], [[-23.0, 40], [55.5, 37]], [[-22.5, 41], [56.0, 36]], [[-22.0, 42], [57.0, 36]], [[-61.5, 13], [-22.5, 43], [58.0, 36]], [[-41.5, 83], [59.0, 36]], [[-42.0, 84], [59.0, 36]], [[-42.0, 86], [60.5, 37]], [[-43.0, 86], [60.5, 35]]], "sprint": [[[-41.0, 84], [62.0, 34]], [[-41.5, 83], [61.0, 34]], [[-65.5, 21], [-22.5, 43], [59.5, 33]], [[-22.0, 40], [58.0, 34]], [[-20.5, 31], [58.0, 30]], [[-32.0, 26], [58.5, 27]], [[-73.0, 24], [46.0, 16]], [[-122.5, 21]], [], [], [], [], [[150.0, 36]], [[137.5, 31]], [[94.0, 38]], [[-42.0, 10], [56.0, 38]], [[-34.5, 31], [46.5, 31]], [[-43.5, 27], [37.0, 26]], [[-90.0, 26], [19.5, 13]], [[-152.5, 17], [27.5, 3]], [], [], [], [[146.5, 35]], [[139.5, 31]], [[105.5, 31]], [[-26.5, 27], [59.5, 35]], [[-36.0, 36], [51.5, 29]], [[-71.5, 29], [36.0, 20]], [[-101.5, 21], [23.0, 10]], [[-170.0, 6]], [], [], [], [[148.5, 29]], [[144.5, 35]], [[109.5, 41]], [[79.0, 36]], [[-28.5, 23], [55.0, 38]], [[-17.0, 26], [53.0, 36]]]};
+function stampFeet(){
+  if(R.y<0||!CONTACT[R.sheet])return;
+  const feet=CONTACT[R.sheet][R.frame]||[];
+  const key=R.sheet+R.frame;if(key===stampFeet.last)return;stampFeet.last=key;
+  const prev=stampFeet.prev||0;stampFeet.prev=feet.length;
+  if(!feet.length||feet.length<=prev&&prev>0)return;   // only the moment a foot comes down
+  const s=(HZ()*0.34)/META.ref;
+  for(const [cx,w] of feet){
+    const x=R.x+R.face*cx*s;
+    let near=false;for(let k=prints.length-1;k>=Math.max(0,prints.length-12);k--)if(Math.abs(prints[k].x-x)<28*s+6){near=true;break}
+    if(near)continue;
+    prints.push({x,w:Math.min(w,40)*s,front:cx>0,t:0,seed:Math.random()});
+    if(prints.length>160)prints.shift();
+  }
+}
+
+function input(){return (keys.r?1:0)-(keys.l?1:0)}
+const isFast=()=>keys.s||fastLatch;
+const onGround=()=>R.y>=-groundH(R.x)-0.5&&!['prep','air'].includes(R.state);
+
+function beginTurn(dir,fast){R.turnTo=dir;R.turnFast=fast;R.flipped=false;go('turn')}
+function beginJump(){R.fastAir=isFast()&&R.state==='sprint';go('prep');kick(1);R.doubled=false;R.dj=9}
+function enterSprint(fromSit){R.sf=fromSit?4:SPR.loop;go('sprint');if(!fromSit)kick(1)}
+
+function update(dt){
+  let dir=input();
+  { const m=HZ()*0.25,ww=worldW();          // pushing against the edge of the painting: stop and settle
+    if(isFinite(ww)&&((dir<0&&R.x<=m+1&&R.face<0)||(dir>0&&R.x>=ww-m-1&&R.face>0)))dir=0; }
+  const sp=TUNE.speed*ZOOM;
+  let targetVx=0;
+  R.t+=dt;
+
+  // jump can start from any grounded state except mid-turn
+  const jp=jumpPressed;jumpPressed=false;
+  if(downPressed){downPressed=false;R.wantLie=true}
+  if(dir!==0||jp)R.wantLie=false;
+  if(jp&&onGround()&&!['turn','prep','lie','scratch'].includes(R.state)){beginJump()}
+  if(R.wantLie&&R.state==='scratch'&&!R.exiting){R.exiting=true;R.exitFrom=Math.max(SCR.back,R.frame);R.t=0}
+  // sprint: hold Shift or double-tap a direction
+  if(isFast()&&dir!==0&&dir===R.face){
+    const st=R.state;
+    if(['idle','start','pause','settle'].includes(st))enterSprint(true);
+    else if(st==='land'||(st==='hop'&&(R.frame>=HOP.touch||R.frame<HOP.air-1)))enterSprint(false);
+  }
+
+  switch(R.state){
+    case 'idle':{
+      R.sheet='idle';R.frame=Math.floor(R.t*12)%META.anims.idle.frames;
+      R.still+=dt;
+      if(dir!==0){R.still=0;R.nextScratch=7;if(dir!==R.face)beginTurn(dir,false);else go('start');break}
+      if(R.wantLie){R.wantLie=false;R.lieKind='loaf';R.lp='down';go('lie');break}  // ↓: lie down, ears up
+      if(R.still>18){R.lieKind='lie';R.lp='down';go('lie');break}                   // long wait: lie down flat, ears back
+      if(R.still>R.nextScratch){R.exiting=false;go('scratch');R.nextScratch=R.still+8+Math.random()*4}
+      break}
+    case 'scratch':{ // hind foot scratches the ear; any input hurries it back to sitting
+      R.sheet='scratch';
+      if((dir!==0||jp)&&!R.exiting){R.exiting=true;R.exitFrom=Math.max(SCR.back,R.frame);R.t=0}
+      R.frame=R.exiting?Math.min(SCR.end,R.exitFrom+Math.floor(R.t*30)):Math.min(SCR.end,Math.floor(R.t*12));
+      R.still+=dt;
+      if(R.frame>=SCR.end){const d=input();
+        if(d!==0){R.still=0;R.nextScratch=7;if(d!==R.face)beginTurn(d,false);else go('start')}
+        else go('idle')}
+      break}
+    case 'lie':{ // lie down, rest (breathing loop), get up when anything is pressed
+      R.sheet=R.lieKind;const LIE=R.lieKind==='loaf'?LOAF:LIE_FLAT;
+      if(R.lp==='down'){R.frame=Math.min(LIE.rest-1,Math.floor(R.t*12));
+        if(dir!==0||jp){R.lp='up';R.t=(LIE.end-R.frame-LIE.up)/18}
+        else if(R.frame>=LIE.rest-1){R.lp='rest';R.t=0}}
+      if(R.lp==='rest'){const n=LIE.restLen,k=Math.floor(R.t*5)%(n*2-2);R.frame=LIE.rest+(k<n?k:n*2-2-k);
+        if(dir!==0||jp){R.lp='up';R.t=0}}
+      if(R.lp==='up'){R.frame=Math.min(LIE.end,LIE.up+Math.floor(R.t*18));
+        if(R.frame>=LIE.end){R.still=0;R.nextScratch=7;const d=input();
+          if(d!==0){if(d!==R.face)beginTurn(d,false);else go('start')}else go('idle')}}
+      break}
+    case 'sprint':{ // bounding gallop; lets go back to hopping on a compact frame
+      R.sheet='sprint';
+      R.sf+=dt*(R.sf<SPR.loop?24:TUNE.sprintFps);
+      const k=Math.floor(R.sf);R.frame=k<SPR.loop?k:SPR.loop+((k-SPR.loop)%SPR.len);
+      const ramp=Math.min(1,R.sf/SPR.loop);
+      targetVx=R.face*sp*TUNE.sprint*(0.35+0.65*ramp);
+      if(dir===0||dir!==R.face){go('land');kick(-1);dust(8,80,50);break}
+      if(!isFast()&&k>=SPR.loop&&SPR.compact.has(R.frame)){go('hop');kick(1)}
+      break}
+    case 'look':{
+      R.sheet='look';const f=Math.floor(R.t*12);R.frame=Math.min(f,47);
+      if(dir!==0){ // interrupted: if facing camera, finish the turn toward the pressed side
+        if(f>=4&&f<=40){R.face=dir;R.turnTo=dir;R.flipped=true;R.turnFast=true;go('turn');R.t=TURN_SEQ_FAST.length/TUNE.turnFps/1.6;break}
+        if(dir!==R.face)beginTurn(dir,false);else go('start');break}
+      if(f>=47){go('idle');R.still=-4}
+      break}
+    case 'start':{ // anticipation: crouch before the first push
+      R.sheet='hop';const f=HOP.prepFrom+Math.floor(R.t*TUNE.hopFps*1.3);R.frame=Math.min(f,HOP.push);
+      targetVx=0;
+      if(dir===0){go('idle');break}
+      if(dir!==R.face){beginTurn(dir,false);break}
+      if(f>=HOP.push){go('hop');R.t=0;kick(1);dust(4,40,40)}
+      break}
+    case 'hop':{ // one hop: push -> air -> touch-down; then a short rest beat before the next one
+      R.sheet='hop';
+      const f=Math.min(HOP.push+Math.floor(R.t*TUNE.hopFps),HOP.landEnd);R.frame=f;
+      targetVx=R.face*sp*TRAVEL(f);
+      const grounded=f>=HOP.touch||f<HOP.air-1;
+      if(dir!==0&&dir!==R.face&&grounded){beginTurn(dir,true);break}
+      if(f===HOP.touch&&!R._touched){dust(3,40,20);R._touched=true;kick(-0.5)}
+      if(f!==HOP.touch)R._touched=false;
+      if(f>=HOP.landEnd){
+        if(dir===0){go('settle');kick(-1);dust(5,50,30)}
+        else{R.settleTo=Math.min(HOP.settleEnd,HOP.landEnd+1+Math.round(TUNE.pause/0.6*12)+Math.floor(Math.random()*3)-1);go('pause');kick(-0.6)}
+      }
+      break}
+    case 'pause':{ // same as tapping the key: sink back toward sitting, then crouch and push again
+      R.sheet='hop';const f=HOP.landEnd+1+Math.floor(R.t*36);R.frame=Math.min(f,R.settleTo);
+      targetVx=0;
+      if(dir===0){go('settle');R.t=(R.frame-HOP.landEnd-1)/28;break}
+      if(dir!==R.face){beginTurn(dir,false);break}
+      if(f>=R.settleTo){go('start')}
+      break}
+    case 'settle':{ // landing crouch back into sitting
+      R.sheet='hop';const f=HOP.landEnd+1+Math.floor(R.t*28);R.frame=Math.min(f,HOP.settleEnd);
+      if(dir!==0){if(dir!==R.face)beginTurn(dir,false);else{go('hop');R.t=0;kick(1)}break}
+      if(f>=HOP.settleEnd){go('idle');R.still=0}
+      break}
+    case 'turn':{ // swing to camera, flip while facing it, swing out the other side
+      R.sheet='look';const seq=R.turnFast?TURN_SEQ_FAST:TURN_SEQ;const fps=TUNE.turnFps*(R.turnFast?1.6:1);
+      const i=Math.floor(R.t*fps),n=seq.length;
+      if(i>=n&&!R.flipped){R.face=R.turnTo;R.flipped=true}
+      if(i>=n*2){
+        const d=input();
+        if(d===R.face){if(R.turnFast){go('hop');kick(1);dust(4,40,40)}else go('start')}
+        else if(d!==0){beginTurn(d,R.turnFast)}
+        else{go('idle');R.still=0}
+        break}
+      R.frame=i<n?seq[i]:seq[n*2-1-i];
+      R.lean=R.turnFast&&i<2?-0.08:0;
+      break}
+    case 'prep':{ // quick crouch, then launch
+      R.sheet='hop';const f=8+Math.floor(R.t*50);R.frame=Math.min(f,HOP.air-1);
+      targetVx=R.fastAir?R.vx:dir*sp*0.6;
+      if(f>=HOP.air-1){const h=HZ()*TUNE.jump;const g=HZ()*3.2;R.vy=-Math.sqrt(2*g*h);go('air');dust(7,60,60);kick(1)}
+      break}
+    case 'air':{
+      R.sheet='hop';
+      const g=HZ()*3.2;
+      if(jp&&!R.doubled){ // second jump: tuck, push off thin air, pixel ring + afterimages
+        R.doubled=true;R.dj=0;R.vy=-Math.sqrt(2*g*HZ()*TUNE.jump*0.85);kick(1);
+        if(dir!==0)R.vx=dir*sp*(R.fastAir?TUNE.sprint:1.2);
+      }
+      R.dj+=dt;
+      R.vy+=g*dt*(R.vy<0&&!keys.j?2.4:1);   // release early = shorter jump
+      R.y+=R.vy*dt;
+      const vmax=Math.sqrt(2*g*HZ()*TUNE.jump)||1,k=R.vy/vmax; // -1 rising fast .. +1 falling fast
+      R.frame=R.dj<0.13?HOP.push+Math.floor(R.dj/0.13*5):k<-0.35?HOP.air+Math.round((k+1)/0.65*5):k<0.25?HOP.apex+Math.round((k+0.35)/0.6*2):Math.min(HOP.touch-1,HOP.fall+Math.round((k-0.25)*6));
+      targetVx=dir!==0?dir*sp*(R.fastAir?TUNE.sprint:1.15):R.vx*0.98;
+      if(R.vy>0&&R.y>=-groundH(R.x)){R.y=-groundH(R.x);R.vy=0;R.doubled=false;R.dj=9;go('land');kick(-1);dust(10,90,70)}
+      break}
+    case 'land':{
+      R.sheet='hop';const f=HOP.touch+Math.floor(R.t*26);R.frame=Math.min(f,HOP.landEnd);
+      targetVx=R.vx*0.7;
+      if(f>=HOP.landEnd){
+        if(dir!==0){if(dir!==R.face)beginTurn(dir,true);else{go('hop');kick(1)}}
+        else{go('settle')}
+      }
+      break}
+  }
+  // velocity: hops accelerate quickly, stops and turns brake
+  const accel=R.state==='air'?4:(R.state==='turn'?10:12);
+  R.vx+=(targetVx-R.vx)*Math.min(1,dt*accel);
+  if(Math.abs(R.vx)<1)R.vx=0;
+  R.x+=R.vx*dt;
+  { const m=HZ()*0.25,ww=worldW();
+    if(isFinite(ww)){if(R.x<m){R.x=m;if(R.vx<0)R.vx=0}
+    if(R.x>ww-m){R.x=ww-m;if(R.vx>0)R.vx=0}} }
+  if(R.state!=='air'&&R.state!=='prep'){
+    const gh=groundH(R.x),drop=(-R.y)-gh;
+    if(drop>Math.abs(R.vx)*dt*0.85+1.5&&['hop','sprint','pause','start','settle','idle','land','turn'].includes(R.state)){
+      R.fastAir=R.state==='sprint';go('air');R.vy=0;R.doubled=false;R.dj=9;   // step off the edge: fall, can still jump once
+    }else R.y=-gh;
+  }
+  R.squashT=Math.min(1,R.squashT+dt/0.24);
+  if(R.state!=='turn')R.lean=0;
+}
+
+// ================= stage =================
+const hash=n=>{n=Math.sin(n*127.1+311.7)*43758.5453;return n-Math.floor(n)};
+const CODES=['0x0000007E','RABBIT_HOLE_EXCEPTION','WONDERLAND.SYS','0xDEADBEEF','*** STOP: 0x000000CE','PAGE_FAULT_IN_NONPAGED_DREAM','IRQL_NOT_LESS_OR_EQUAL','0xC0FFEE00','TEA_PARTY_TIMEOUT','CLOCK_WATCHDOG_TIMEOUT'];
+let cam=0,camY=0;
+function worldW(){return Infinity}   // endless blue
+let lastWorldW=0;
+function drawBSOD(G,time){
+  ctx.fillStyle='#041aee';ctx.fillRect(0,-H,W,H*2);
+  // far layer: huge faint error fragments
+  const mono=getComputedStyle(document.documentElement).getPropertyValue('--mono');
+  ctx.textBaseline='alphabetic';
+  const farSlot=520,farOff=cam*0.15,ff=Math.floor(farOff/farSlot)-1;
+  for(let i=ff;i<ff+W/farSlot+3;i++){
+    const x=i*farSlot-farOff,y=H*(0.16+hash(i)*0.34);
+    ctx.fillStyle='rgba(255,255,255,0.055)';
+    if(hash(i+4)<0.3){ctx.font=`${Math.round(H*0.2)}px ${mono}`;ctx.fillText(':(',x,y+H*0.1)}
+    else{ctx.font=`600 ${Math.round(H*0.04)}px ${mono}`;ctx.fillText(CODES[Math.floor(hash(i+7)*CODES.length)],x,y)}
+  }
+  // mid layer: scan columns
+  const midSlot=140,mOff=cam*0.45,mf=Math.floor(mOff/midSlot)-1;
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  for(let i=mf;i<mf+W/midSlot+3;i++){const x=i*midSlot-mOff;const h=H*(0.1+hash(i*3.3)*0.4);ctx.fillRect(x,G-h,2,h)}
+  // horizon band + floor
+  ctx.fillStyle='#0212b8';ctx.fillRect(0,G,W,H-G);
+  ctx.fillStyle='rgba(255,255,255,0.9)';ctx.fillRect(0,G,W,2);
+  // floor perspective lines
+  ctx.strokeStyle='rgba(255,255,255,0.10)';ctx.lineWidth=1;
+  const vp=W/2,step=120,fOff=cam%step;
+  ctx.beginPath();
+  for(let x=-W;x<W*2;x+=step){const bx=x-fOff;ctx.moveTo(bx,G);ctx.lineTo(vp+(bx-vp)*3.2,H)}
+  for(let k=1;k<5;k++){const y=G+(H-G)*(k*k)/25;ctx.moveTo(0,y);ctx.lineTo(W,y)}
+  ctx.stroke();
+  // ground ticks every metre, labels every 5 m (60 px = 1 m)
+  const M=60,tOff=cam,tf=Math.floor((tOff-W/2)/M)-1;
+  ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font=`11px ${mono}`;ctx.textAlign='center';
+  for(let i=tf;i<tf+W/M+3;i++){const x=i*M-tOff+W/2;const big=i%5===0;ctx.fillRect(x,G+2,1,big?10:5);
+    if(big&&i>=0)ctx.fillText(i+' m',x,G+26)}
+  ctx.textAlign='left';
+}
+
+// ================= snowfield =================
+// Fixed bright morning for now (a later chapter can bring back other light). Light comes from the right.
+const IMG={};
+let BLUE=[8,44,251];   // the chroma blue the rabbit was filmed on
+const MOUNDS={"mound1": {"base": 263, "w": 1280, "h": 333}, "mound2": {"base": 209, "w": 1280, "h": 279}, "mound3": {"base": 175, "w": 1119, "h": 245}, "mound4": {"base": 215, "w": 957, "h": 285}, "mound5": {"base": 212, "w": 1157, "h": 282}};
+const MNAMES=Object.keys(MOUNDS);
+const rgb=c=>`rgb(${c.map(Math.round)})`;
+let L={light:[255,255,255]};
+const SNOW_G=[222,222,215],SHADE_G=[166,166,204];
+const ok=im=>im&&im.complete&&im.naturalWidth>0;
+function strip(im,par,h,y){ // mirror-tiled painted strip
+  if(!ok(im))return;const sc=h/im.naturalHeight,w=im.naturalWidth*sc,off=cam*par,first=Math.floor(off/w)-1;
+  for(let i=first;i<first+W/w+3;i++){const x=i*w-off;
+    if(i&1){ctx.save();ctx.translate(x+w,y);ctx.scale(-1,1);ctx.drawImage(im,0,0,w,h);ctx.restore()}else ctx.drawImage(im,x,y,w,h)}
+}
+// A mound row at depth z (1 = the rabbit's path; >1 further back, <1 closer to us).
+// Further rows sit higher, look smaller and slide slower.
+// Height profile of each mound painting (0..1 of its height, per column), read once the image loads.
+const PROF={};
+function profile(name){
+  if(PROF[name])return PROF[name];const im=IMG[name],m=MOUNDS[name];if(!ok(im))return null;
+  const c=document.createElement('canvas');c.width=m.w;c.height=m.base;const x=c.getContext('2d');x.drawImage(im,0,0);
+  let d;try{d=x.getImageData(0,0,m.w,m.base).data}catch(e){return null}
+  const N=200,p=new Float32Array(N);
+  for(let k=0;k<N;k++){const u=Math.floor(k/(N-1)*(m.w-1));let top=m.base;
+    for(let y=0;y<m.base;y++)if(d[(y*m.w+u)*4+3]>140){top=y;break}
+    p[k]=Math.max(0,(m.base-top)/m.base)}
+  // smooth so the rabbit rolls over the painted edge instead of catching on brush bumps
+  const q=new Float32Array(N);for(let k=0;k<N;k++){let s2=0,n=0;for(let j=-4;j<=4;j++){const v=p[k+j];if(v!==undefined){s2+=v;n++}}q[k]=s2/n}
+  return PROF[name]=q;
+}
+// mounds on the path, in world coordinates (same speed as the rabbit)
+const HILLS=false;   // walkable hills switched off
+const PATH_SLOT=1500,PATH_SEED=71;
+function pathMound(i){
+  if(i<=0||(i>1&&hash(i*3.7+PATH_SEED)>0.62))return null;   // none at the start, always one just ahead
+  const name=MNAMES[Math.floor(hash(i*5.3+PATH_SEED)*MNAMES.length)],m=MOUNDS[name];
+  const hh=HZ()*(0.22+0.3*hash(i*7.1+PATH_SEED));          // about 0.6x to 1.5x the rabbit's height
+  const sc=hh/m.base,stretch=1.7;                           // stretched wide so slopes stay walkable
+  const w=m.w*sc*stretch,x0=i*PATH_SLOT*ZOOM+(hash(i*2.2+PATH_SEED)-0.5)*PATH_SLOT*ZOOM*0.4;
+  return{name,m,hh,sc,stretch,w,x0,flip:hash(i*4.4+PATH_SEED)<0.5};
+}
+function groundH(x){ // snow height above the flat plain at world x (no hills for now: flat snow)
+  if(!HILLS)return 0;
+  const slot=PATH_SLOT*ZOOM,i0=Math.floor(x/slot);let h=0;
+  for(let i=i0-1;i<=i0+1;i++){const pm=pathMound(i);if(!pm||x<pm.x0||x>pm.x0+pm.w)continue;
+    const p=profile(pm.name);if(!p)continue;let u=(x-pm.x0)/pm.w;if(pm.flip)u=1-u;
+    const f=u*(p.length-1),k=Math.floor(f),t=f-k,v=p[k]*(1-t)+(p[Math.min(p.length-1,k+1)]||0)*t;
+    h=Math.max(h,v*pm.hh)}
+  return h;
+}
+function drawPathMounds(G){
+  const slot=PATH_SLOT*ZOOM,i0=Math.floor((cam-W)/slot)-1;
+  for(let i=i0;i<i0+(W*2)/slot+3;i++){const pm=pathMound(i);if(!pm||!ok(IMG[pm.name]))continue;
+    const x=W/2+(pm.x0-cam),h=pm.m.h*pm.sc;if(x>W||x+pm.w<0)continue;
+    ctx.save();ctx.translate(pm.flip?x+pm.w:x,G+2-pm.m.base*pm.sc);if(pm.flip)ctx.scale(-1,1);
+    ctx.drawImage(IMG[pm.name],0,0,pm.w,h);ctx.restore()}
+}
+function moundRow(z,G,seed,chance,sizeMin,sizeMax){
+  const hz=G-H*0.26,baseY=hz+(G-hz)/z,par=1/z,k=1/z;
+  const slot=W*0.55*k+180,off=cam*par,first=Math.floor((off-W)/slot)-1;
+  for(let i=first;i<first+(W*2)/slot+3;i++){
+    if(hash(i*3.7+seed)>chance)continue;
+    const name=MNAMES[Math.floor(hash(i*5.3+seed)*MNAMES.length)],m=MOUNDS[name],im=IMG[name];if(!ok(im))continue;
+    const hh=H*k*(sizeMin+(sizeMax-sizeMin)*hash(i*7.1+seed)),sc=hh/m.base*0.62,w=m.w*sc,h=m.h*sc;
+    const x=i*slot-off+W/2+(hash(i*2.2+seed)-0.5)*slot*0.6-w/2;
+    if(x>W||x+w<0)continue;
+    const flip=hash(i*4.4+seed)<0.5,by=baseY+(hash(i*9.9+seed)-0.5)*H*0.02*k;
+    ctx.save();ctx.translate(flip?x+w:x,by-m.base*sc);if(flip)ctx.scale(-1,1);ctx.drawImage(im,0,0,w,h);ctx.restore();
+  }
+}
+function drawSnowfield(G,time){
+  // pale morning sky, running far up so high jumps never show an edge
+  // flat sky, the painting's own colour, running far up so high jumps never show an edge
+  ctx.fillStyle='rgb(208,211,210)';ctx.fillRect(0,-H*2,W,G+H*2.1);
+  // solid blue screen
+  ctx.fillStyle=rgb(BLUE);ctx.fillRect(-W*3,-H*4,W*7,H*9);
+
+}
+function crashP(){return 0}
+function drawStage(G,time){drawSnowfield(G,time)}
+
+const rc=document.createElement('canvas'),rx=rc.getContext('2d'),rim=document.createElement('canvas'),rimx=rim.getContext('2d');
+function litSprite(name,frame,rimDX,rimDY){ // sprite cell tinted by the hour's light, with a thin rim on the sun side
+  const im=sheets[name],a=META.anims[name],fr=Math.max(0,Math.min(a.frames-1,frame));
+  const sx=(fr%a.cols)*a.w,sy=Math.floor(fr/a.cols)*a.h;
+  for(const c of [rc,rim])if(c.width!==a.w||c.height!==a.h){c.width=a.w;c.height=a.h}
+  rx.globalCompositeOperation='source-over';rx.clearRect(0,0,a.w,a.h);rx.drawImage(im,sx,sy,a.w,a.h,0,0,a.w,a.h);
+  rx.globalCompositeOperation='multiply';rx.fillStyle=rgb(L.light.map(v=>Math.min(255,v*1.06+8)));rx.fillRect(0,0,a.w,a.h);
+  rx.globalCompositeOperation='destination-in';rx.drawImage(im,sx,sy,a.w,a.h,0,0,a.w,a.h);
+  if(rimDX||rimDY){ // rim = sprite minus itself shifted away from the light
+    rimx.globalCompositeOperation='source-over';rimx.clearRect(0,0,a.w,a.h);rimx.drawImage(im,sx,sy,a.w,a.h,0,0,a.w,a.h);
+    rimx.globalCompositeOperation='destination-out';rimx.drawImage(im,sx,sy,a.w,a.h,-rimDX,-rimDY,a.w,a.h);
+    rimx.globalCompositeOperation='source-in';rimx.fillStyle=rgb(L.rim);rimx.fillRect(0,0,a.w,a.h);
+    rx.globalCompositeOperation='source-over';rx.globalAlpha=0.75;rx.drawImage(rim,0,0);rx.globalAlpha=1}
+  rx.globalCompositeOperation='source-over';
+  return a;
+}
+function blit(name,frame,x,y,face,sqx,sqy,rot,pivot,alpha,rimDX=0,rimDY=0){
+  const im=sheets[name];if(!im||!im.complete)return;
+  const a=litSprite(name,frame,rimDX,rimDY),s=(HZ()*0.34)/META.ref;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);
+  if(rot){ctx.translate(0,-pivot*s);ctx.rotate(rot*face);ctx.translate(0,pivot*s)}
+  ctx.scale(face*s*sqx,s*sqy);
+  ctx.drawImage(rc,-a.ax,-a.ay);
+  ctx.restore();
+}
+const LIFT={"lie": [-4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -5.6, -5.0, -4.0, -4.0, -4.0, -4.8, -5.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -5.0, -5.8, -4.6, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0, -4.0], "loaf": [-5.0, -4.8, -4.0, -3.0, -2.0, 2.0, 12.0, 15.0, 17.0, 20.0, 23.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 25.0, 24.0, 22.0, 20.0, 15.0, 10.0, 5.0, -1.6, -3.0, -4.0, -5.0, -5.0]};   // px each lying frame sits below the ground line in its clip
+const scv=document.createElement('canvas'),sctx=scv.getContext('2d');
+const SH={dx:-0.5,dy:-0.14};   // shadow falls back and away from us: it starts at the feet and lies behind the body    // shadow falls mostly toward us (a little left), so it sits under the whole body
+const GROUND={"idle": [[-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0]], "look": [[-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-2.0, 86.0, 0.0], [-5.0, 84.0, 0.0], [-14.0, 73.0, 0.0], [15.5, 16.5, 0.0], [11.5, 17.5, 0.0], [11.0, 18.0, 0.0], [28.0, 36.0, 0.0], [23.0, 30.0, 0.0], [22.5, 29.5, 0.0], [22.5, 29.5, 0.0], [19.0, 33.0, 0.0], [11.5, 40.5, 0.0]], "hop": [[-1.5, 86.0, 0.0], [-1.5, 86.0, 0.0], [-2.0, 86.5, 0.0], [-2.0, 86.5, 0.0], [-3.0, 86.5, 0.0], [-3.5, 86.0, 0.0], [-4.5, 85.0, 0.0], [-5.5, 80.0, 0.0], [0.0, 70.5, 0.0], [1.5, 63.0, 0.0], [-40.0, 24.5, 0.0], [-48.5, 20.0, 0.0], [-53.5, 18.0, 0.0], [-60.5, 17.0, 0.0], [-69.0, 15.5, 0.0], [-89.0, 12.5, 0.0], [-101.0, 13.5, 0.0], [-110.5, 14.0, 0.0], [-118.5, 14.0, 1.8], [-133.0, 13.5, 19.8], [-139.5, 13.0, 28.8], [-145.5, 14.0, 39.8], [-28.5, 138.0, 49.8], [93.0, 18.5, 42.8], [91.5, 19.0, 33.8], [90.0, 18.5, 23.8], [85.5, 20.0, 14.8], [76.0, 22.5, 2.8], [72.0, 24.5, 2.8], [68.5, 25.0, 1.8], [64.5, 26.0, 1.8], [59.0, 26.5, 1.8], [56.5, 26.0, 0.8], [55.0, 25.5, 0.8], [18.0, 60.5, 0.8], [17.5, 60.0, 0.0], [16.0, 61.5, 0.0], [15.0, 62.5, 0.0], [15.0, 62.5, 0.0], [13.0, 64.5, 0.0], [4.5, 74.0, 0.0], [0.5, 78.0, 0.0], [-3.5, 83.0, 0.0], [-5.0, 85.5, 0.0], [-5.0, 85.5, 0.0], [-4.0, 86.5, 0.0], [-4.5, 86.0, 0.0]], "sprint": [[-3.0, 86.5, 0.0], [-4.0, 86.5, 0.0], [-5.5, 86.0, 0.0], [-0.5, 80.0, 0.0], [15.0, 62.5, 0.0], [11.5, 64.0, 0.0], [-15.5, 73.0, 0.0], [-123.0, 13.5, 0.0], [-188.0, 16.5, 12.0], [-46.5, 187.0, 29.0], [152.5, 31.0, 38.0], [148.0, 52.5, 38.0], [146.5, 25.0, 2.0], [132.0, 32.5, 3.0], [17.5, 100.0, 3.0], [11.5, 69.0, 2.0], [2.0, 63.5, 0.0], [-5.5, 59.0, 0.0], [-38.0, 65.5, 0.0], [-65.0, 100.5, 0.0], [-56.0, 177.5, 22.0], [141.0, 18.5, 35.0], [146.5, 47.0, 29.0], [145.0, 22.5, 0.0], [131.5, 34.0, 4.0], [28.0, 99.5, 5.0], [14.5, 67.0, 2.0], [5.0, 64.5, 0.0], [-19.0, 68.5, 0.0], [-42.0, 72.5, 0.0], [-171.0, 14.5, 5.0], [-60.0, 171.5, 22.0], [150.0, 27.5, 39.0], [152.5, 45.0, 41.0], [145.0, 22.5, 3.0], [140.0, 27.5, 3.0], [100.0, 34.5, 3.0], [5.5, 96.0, 4.0], [14.0, 64.5, 2.0], [16.0, 59.5, 2.0]], "scratch": [[60.0, 24.0, 2.0], [60.5, 24.5, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [60.0, 24.0, 2.0], [6.0, 78.0, 2.0], [-1.0, 85.0, 2.0], [-2.0, 86.0, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0]], "lie": [[-2.0, 87.0, 0.0], [-1.0, 88.0, 0.0], [3.0, 92.0, 0.0], [9.5, 98.5, 0.0], [14.5, 103.5, 0.0], [16.0, 105.0, 0.0], [16.5, 104.5, 0.0], [21.0, 100.0, 0.0], [36.5, 84.5, 0.0], [29.0, 91.0, 0.0], [-1.0, 104.0, 0.0], [-11.0, 131.0, 0.0], [-24.0, 145.0, 0.0], [-33.0, 154.0, 0.0], [-29.5, 164.5, 0.0], [-29.5, 165.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-29.5, 166.5, 0.0], [-15.0, 130.0, 0.0], [2.0, 112.0, 0.0], [20.5, 94.5, 0.0], [35.0, 86.0, 0.0], [37.0, 84.0, 0.0], [23.5, 97.5, 0.0], [17.5, 103.5, 0.0], [15.5, 104.5, 0.0], [11.0, 100.0, 0.0], [4.0, 93.0, 0.0], [-1.0, 88.0, 0.0], [-2.0, 87.0, 0.0], [-2.0, 87.0, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0], [-2.5, 86.5, 0.0]], "loaf": [[-2.5, 86.5, 1.0], [-2.0, 87.0, 1.0], [0.0, 88.0, 0.0], [9.0, 85.0, 0.0], [38.0, 62.0, 0.0], [75.0, 34.0, 0.0], [9.5, 98.5, 0.0], [-13.0, 121.0, 0.0], [-26.5, 134.5, 0.0], [-8.0, 163.0, 0.0], [-8.5, 164.5, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-9.0, 165.0, 0.0], [-7.5, 164.5, 0.0], [-7.0, 164.0, 0.0], [-7.5, 154.5, 0.0], [-16.0, 122.0, 0.0], [8.5, 100.5, 0.0], [37.5, 71.5, 0.0], [79.0, 28.0, 0.0], [35.0, 63.0, 1.0], [0.0, 89.0, 1.0], [-2.0, 87.0, 1.0], [-2.5, 86.5, 1.0]]};   // per frame: [centre x, half width, gap above ground] of the lowest part of the body
+const smc=document.createElement('canvas'),smx=smc.getContext('2d');   // shadow direction: light from the right, falls left and toward us
+const bits=[];
+function snowKick(x,n,vx0){for(let i=0;i<n;i++)bits.push({x:x+(Math.random()-0.5)*14,y:0,vx:vx0+(Math.random()-0.5)*90,vy:-(70+Math.random()*120),t:0,life:0.3+Math.random()*0.25,s:1.6+Math.random()*2.6})}
+function drawRabbit(G){
+  const s=(HZ()*0.34)/META.ref;
+  let sqx=1,sqy=1;
+  if(R.squashT<1&&!reduceMotion){const k=R.squashT;const amt=R.squash>0?(k<0.35?-0.06:0.05):-0.07;
+    sqy=1+amt*Math.sin(Math.PI*k);sqx=1-amt*0.6*Math.sin(Math.PI*k)}
+  const gh=groundH(R.x),gLine=G-gh;
+  const grounded=R.state!=='air'&&R.state!=='prep';
+  const slope=(groundH(R.x+6)-groundH(R.x-6))/12,tilt=grounded?-Math.atan(slope)*0.7:0;
+  const sinks=false;   // feet no longer sink into the snow
+  R.sink=(R.sink||0)+((sinks?HZ()*0.009:0)-(R.sink||0))*0.35;     // feet settle a little into the snow
+  const lift=(LIFT[R.sheet]&&LIFT[R.sheet][R.frame])||0;
+  const px=W/2+(R.x-cam),py=G+R.y+2+R.sink-lift*s*sqy;
+  // --- shadow: one layer, the rabbit's own silhouette laid on the ground ---
+  // while scratching, use the sitting pose so the raised hind foot casts nothing
+  const shSheet=R.sheet,shFrame=R.frame;
+  const shLift=(LIFT[shSheet]&&LIFT[shSheet][shFrame])||0;
+  const sa=litSprite(shSheet,shFrame,0,0);
+  if(scv.width!==sa.w||scv.height!==sa.h){scv.width=sa.w;scv.height=sa.h}
+  sctx.globalCompositeOperation='source-over';sctx.clearRect(0,0,sa.w,sa.h);sctx.drawImage(rc,0,0);
+  sctx.globalCompositeOperation='source-in';sctx.fillStyle='rgb(0,0,110)';sctx.fillRect(0,0,sa.w,sa.h);sctx.globalCompositeOperation='source-over';
+  const air=Math.max(0,-R.y-gh),fade=Math.max(0.15,1-air/(HZ()*0.5));
+  ctx.save();ctx.globalAlpha=0.35*fade;
+  ctx.translate(px+SH.dx*air,gLine+2);   // in the air the shadow stays on the ground, slipping back a little
+  ctx.transform(R.face*s*sqx,0,-SH.dx*s*sqy,-SH.dy*s*sqy,0,0);
+  ctx.drawImage(scv,-sa.ax,-sa.ay-shLift);ctx.restore();
+  const a=litSprite(R.sheet,R.frame,0,0);
+  // rabbit, cut at the snow line so the feet look pressed in
+  ctx.save();
+  if(sinks&&Math.abs(slope)<0.05){ctx.beginPath();ctx.rect(-W,-H*3,W*3,gLine+2+H*3);ctx.clip()}
+  ctx.translate(px,py);ctx.rotate(R.lean*R.face+tilt);ctx.scale(R.face*s*sqx,s*sqy);ctx.drawImage(rc,-a.ax,-a.ay);
+  ctx.restore();
+  // soft snow lip where the feet go in
+  if(sinks&&Math.abs(slope)<0.05&&CONTACT[R.sheet]){const feet=CONTACT[R.sheet][R.frame]||[];
+    ctx.fillStyle='rgba(248,248,244,0.95)';
+    for(const [cx,w] of feet){const x=px+R.face*cx*s;ctx.beginPath();ctx.ellipse(x,gLine+2.5,Math.max(6,w*s*0.6),2.6,0,0,7);ctx.fill()}}
+  // kicked-up snow
+  for(let i=bits.length-1;i>=0;i--){const b=bits[i];b.t+=1/60;if(b.t>b.life){bits.splice(i,1);continue}
+    b.vy+=900/60;b.x+=b.vx/60;b.y=Math.min(0,b.y+b.vy/60);
+    ctx.fillStyle=`rgba(250,250,247,${1-b.t/b.life})`;ctx.beginPath();ctx.arc(W/2+(b.x-cam),G+1+b.y,b.s,0,7);ctx.fill()}
+}
+
+function drawParticles(G,dt){
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.t+=dt;if(p.t>p.life){particles.splice(i,1);continue}
+    if(p.air){p.vx*=Math.pow(0.02,dt);p.vy*=Math.pow(0.02,dt);p.x+=p.vx*dt;p.y+=p.vy*dt}
+    else{p.vy+=500*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.y>0){p.y=0;p.vy*=-0.3}}
+    ctx.fillStyle=`rgba(255,255,255,${0.85*(1-p.t/p.life)})`;
+    ctx.fillRect(W/2+(p.x-cam)-p.s/2,G+p.y-p.s,p.s,p.s)}
+}
+
+// ================= loop =================
+const distEl=document.getElementById('dist'),stateEl=document.getElementById('state');
+let last=performance.now(),time=0;
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;time+=dt;
+  update(dt);
+  if(!R.placed){R.placed=true;R.x=W*0.35;cam=W/2}
+  { const ww=worldW();
+    if(R.placed&&isFinite(ww)){if(lastWorldW&&ww!==lastWorldW){R.x*=ww/lastWorldW;cam*=ww/lastWorldW}lastWorldW=ww}   // window resized: keep the same spot in the painting
+    let target=R.x+R.face*W*0.06;
+    if(isFinite(ww))target=ww<=W?ww/2:Math.min(ww-W/2,Math.max(W/2,target));
+    cam+=(target-cam)*Math.min(1,dt*3.2); }
+  const G=Math.round(H*0.7);
+  // camera rises with high jumps so the rabbit never leaves the top of the screen
+  camY+=(Math.min(0,R.y+H*0.16)-camY)*Math.min(1,dt*7);
+  ctx.save();ctx.translate(0,-camY);
+  { const fast=R.state==='sprint'||(R.state==='air'&&R.fastAir),moving=Math.abs(R.vx)>TUNE.speed*ZOOM*0.3;
+    const tz=fast?0.62:moving?0.9:1;
+    AZ+=(tz-AZ)*Math.min(1,dt*(tz<AZ?1.1:0.55));      // out quickly-ish, back slowly
+  }
+  const Z=VZ*AZ;
+  if(Math.abs(Z-1)>0.001){ // zoom around the rabbit; when zoomed in, lift it toward the middle of the screen
+    const zx=W/2+(R.x-cam),zy=G+R.y-HZ()*0.1,ty=zy-(zy-H*0.58)*Math.max(0,Math.min(1,(Z-1)/1.5));
+    ctx.translate(zx,ty);ctx.scale(Z,Z);ctx.translate(-zx,-zy)}
+  drawStage(G,time);
+  if(loadedCount===SPRITES.length)drawRabbit(G);
+  ctx.restore();
+  distEl.textContent=String(Math.max(0,Math.round(R.x/(60*ZOOM)))).padStart(4,'0')+' m';
+  stateEl.textContent=`${R.state.toUpperCase()} · ${R.sheet} ${String(R.frame).padStart(2,'0')}`;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById('fade').classList.add('off')));
+addEventListener('keydown',e=>{if(e.key==='Escape')location.href='../'});
+addEventListener('pageshow',e=>{if(e.persisted)document.getElementById('fade').classList.add('off')});
+})();
+</script>
+
+</body></html>
+</body>
+</html>
