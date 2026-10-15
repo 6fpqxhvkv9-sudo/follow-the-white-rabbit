@@ -48,6 +48,12 @@
   .screen iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   .screen img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#fff; cursor:pointer; -webkit-user-drag:none; }
   #player.pdf .win { width:min(1280px, 100%); }
+  /* a paper (portrait pages): tall window that fits the screen height */
+  #player.portrait .win { width:min(100%, calc((100dvh - 120px) * 0.773)); }
+  #player.portrait .screen { aspect-ratio:1445/1870; }
+  /* no long-press image menu / loupe on the map (iOS) */
+  #map, #map * { -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  html, body { touch-action:none; }
   .nav { display:none; align-items:center; justify-content:center; gap:18px; height:40px; background:var(--bar); color:var(--barink); font-size:14px; }
   .nav.on { display:flex; }
   .nav button { border:0; background:none; font:inherit; font-size:20px; color:var(--barink); cursor:pointer; padding:4px 12px; }
@@ -478,7 +484,8 @@
   const PDF = {
     cony2026: { t:'Cony — Blue 2026',   dir:'pdf/cony2026', n:36, file:'pdf/Cony_blue_2026.pdf' },
     conix:    { t:'Conix',              dir:'pdf/conix',    n:15, file:'pdf/Conix.pdf' },
-    casino:   { t:'Casino Cony 2022',   dir:'pdf/casino',   n:23, file:'pdf/Casino_Cony_2022.pdf' }
+    casino:   { t:'Casino Cony 2022',   dir:'pdf/casino',   n:23, file:'pdf/Casino_Cony_2022.pdf' },
+    reverie:  { t:'Reverie — ISEA2026', dir:'pdf/reverie',  n:8,  file:'pdf/Reverie_ISEA2026.pdf', portrait:true }
   };
   const LINKS = {
     // start
@@ -498,7 +505,7 @@
     '->daydreaming': { room:'daydreaming' },
     '->Ai.exe':      { room:'ai.exe' },
     '->Conix':       { pdf:'conix' },
-    '->Reverie':     { url: OLD + 'Reverie.pdf', label:'Reverie (PDF)' },
+    '->Reverie':     { pdf:'reverie' },
     '->54':          { url: OLD + 'timeline.html', label:'54' },
     '->sotrmax youtube': { v:'softmax' }, '->softmax': { v:'softmax' },
     // press kit
@@ -575,6 +582,7 @@
       });
       const cx = (x0 + x1) / 2, w = Math.max(1080, x1 - x0 + 40);
       rooms[id] = { x: cx - w/2, y: y0 - 110, w, h: Math.max(1920, y1 - y0 + 180) };
+      if (id === 'start') { const c = wb(document.getElementById('start_cony')); if (c) rooms[id].anchor = c.x + c.width / 2; }
     });
   }
 
@@ -587,6 +595,13 @@
 
   function roomView(id) {
     const r = rooms[id]; const pad = 1.04;
+    if (id === 'start' && r.anchor != null) {           // keep CONY in the middle of the screen
+      const half = Math.max(r.anchor - r.x, r.x + r.w - r.anchor);
+      const s = Math.min(vw() / (2 * half * pad), vh() / 1920);
+      const showH = Math.min(r.h, 1920);
+      const y = vh()/s > showH ? r.y + showH/2 - vh()/s/2 : r.y;
+      return { x: r.anchor - vw()/s/2, y, s };
+    }
     const s = Math.min(vw() / (r.w * pad), vh() / 1920);
     const x = r.x + r.w/2 - vw()/s/2;
     const showH = Math.min(r.h, 1920);
@@ -658,6 +673,7 @@
     list = l;
     lastFocus = document.activeElement;
     player.classList.toggle('pdf', !!l.pdf);
+    player.classList.toggle('portrait', !!l.portrait);
     player.classList.add('on'); openedAt = Date.now(); show(0);
     player.querySelector('[data-close]').focus();
   }
@@ -702,6 +718,7 @@
     if (a.v) openVideo(a.v);
     else if (a.pdf) openPdf(a.pdf);
     else if (a.room) toRoom(a.room);
+    else if (a.world) toWorld();
     else if (a.home) home();
   }
 
@@ -750,6 +767,10 @@
     tapped = null;
     const a = JSON.parse(el.dataset.act); if (a.url) openUrl(a.url);
   });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive:false });
+  let lastEnd = 0;
+  document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastEnd < 300 && !e.target.closest('#player')) e.preventDefault(); lastEnd = n; }, { passive:false });
   svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
   svg.addEventListener('wheel', e => {
     e.preventDefault(); cancelAnimationFrame(raf);
