@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="description" content="Cony — media artist, composer and AI researcher. Follow the white rabbit into the blue.">
+<meta property="og:title" content="Cony — Follow the White Rabbit">
+<meta property="og:description" content="Media artist, composer and AI researcher. A blue-screen world.">
+<link rel="icon" href="../favicon.png">
+<title>Follow the White Rabbit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400&family=Noto+Sans+KR:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  :root { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; } }
+  :root[data-theme="dark"] { --blue:#082CFB; --ink:#fff; --bar:#e9e9ec; --barink:#222; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--blue); overscroll-behavior:none; }
+  body { -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; font-family:'Inter', system-ui, sans-serif; }
+  #map { position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; display:block; touch-action:none; cursor:grab; }
+  #map.drag { cursor:grabbing; }
+  #map [data-act] { cursor:pointer; transition:opacity .15s; }
+  @media (hover:hover) { #map [data-act]:hover { opacity:.75; } }
+  #map tspan[data-act] { text-decoration:underline; text-underline-offset:6px; }
+  #map [data-act]:focus { outline:none; }
+  #map text[data-act] { pointer-events:bounding-box; }
+  #map [data-act]:focus-visible { opacity:.6; }
+  #map text { font-family:'Inter', 'Noto Sans KR', system-ui, sans-serif; }
+
+  /* the eyes: always top-left */
+  #eyes { position:fixed; z-index:10; left:calc(14px + env(safe-area-inset-left,0px)); top:calc(14px + env(safe-area-inset-top,0px));
+          width:clamp(96px, 11vw, 150px); padding:6px; margin:-6px; border:0; background:none; cursor:pointer; line-height:0; }
+  #eyes img { width:100%; height:auto; display:block; pointer-events:none; filter:drop-shadow(0 2px 6px rgba(0,0,40,.25)); transition:transform .2s; }
+  @media (hover:hover) { #eyes:hover img { transform:scale(1.06); } }
+  #eyes:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+
+  /* video window */
+  #player { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,10,80,.35); }
+  #player.on { display:flex; }
+  .win { width:min(960px, 100%); background:#000; border-radius:10px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,40,.45); }
+  .bar { display:flex; align-items:center; gap:8px; height:34px; padding:0 12px; background:var(--bar); color:var(--barink); font-size:13px; }
+  .dot { width:13px; height:13px; border-radius:50%; border:0; padding:0; flex:none; }
+  .dot.r { background:#ff5f57; cursor:pointer; } .dot.y { background:#febc2e; } .dot.g { background:#28c840; }
+  .bar .ttl { flex:1; min-width:0; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar a { color:var(--barink); text-decoration:none; opacity:.7; font-size:12px; white-space:nowrap; }
+  .bar a:hover { opacity:1; }
+  .screen { position:relative; aspect-ratio:16/9; background:#000; }
+  .screen iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .screen img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#fff; cursor:pointer; -webkit-user-drag:none; }
+  #player.pdf .win { width:min(1280px, 100%); }
+  .nav { display:none; align-items:center; justify-content:center; gap:18px; height:40px; background:var(--bar); color:var(--barink); font-size:14px; }
+  .nav.on { display:flex; }
+  .nav button { border:0; background:none; font:inherit; font-size:20px; color:var(--barink); cursor:pointer; padding:4px 12px; }
+  .nav button:disabled { opacity:.25; cursor:default; }
+</style>
+</head>
+<body>
+<button id="eyes" type="button" aria-label="Back to start"><img src="img/eyes.webp" alt=""></button>
+<div id="player" role="dialog" aria-modal="true" aria-label="Video">
+  <div class="win">
+    <div class="bar">
+      <button class="dot r" type="button" aria-label="Close video" data-close></button><span class="dot y"></span><span class="dot g"></span>
+      <span class="ttl" id="ttl"></span>
+      <a id="yt" href="#" target="_blank" rel="noopener">YouTube ↗</a>
+    </div>
+    <div class="screen" id="screen"></div>
+    <div class="nav" id="nav">
+      <button type="button" id="prev" aria-label="Previous video">‹</button>
+      <span id="count"></span>
+      <button type="button" id="next" aria-label="Next video">›</button>
+    </div>
+  </div>
+</div>
+<svg id="map" viewBox="0 0 11237 13362" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Cony's blue world" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="terminal update 2026.10">
+<g id="Group 10">
+<text id="-&gt;just stand there" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5334.71" y="2997.21">&#x2192;just stand there</tspan></text>
+<rect id="dance" x="5146" y="1781" width="621.561" height="1188.93" fill="url(#pattern0_4002_637)"/>
+</g>
+<g id="Group 2">
+<rect id="-&gt;idle youtube" x="7831" y="4995" width="2467.44" height="588.477" fill="url(#pattern1_4002_637)"/>
+<text id="-&gt;idle" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="8963" y="5636.27">&#x2192;idle</tspan></text>
+</g>
+<g id="work">
+<rect id="-&gt;work" x="3858" y="2264" width="188" height="204" fill="url(#pattern2_4002_637)"/>
+<text id="Work" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="3904" y="2542.55">Work&#10;</tspan></text>
+<rect id="-&gt;start" x="4155" y="4836" width="247" height="181" fill="url(#pattern3_4002_637)"/>
+<text id="-&gt;home" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4231" y="5059.27">&#x2192;home</tspan></text>
+<rect id="-&gt;sotrmax youtube" x="3487" y="4872" width="603" height="650" fill="url(#pattern4_4002_637)"/>
+<text id="-&gt;softmax" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="3888" y="4870.27">&#x2192;softmax</tspan></text>
+<text id="2025" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="3916" y="3113.55">2025</tspan></text>
+<text id="2024" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="3911" y="3447.55">2024</tspan></text>
+<text id="2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="40" letter-spacing="0em"><tspan x="3906" y="2717.55">2026</tspan></text>
+<text id="-&gt;daydreaming" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3858" y="2866.64">&#x2192;daydreaming</tspan></text>
+<text id="-&gt;54" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3921" y="3172.64">&#x2192;54</tspan></text>
+<text id="-&gt;Ai.exe" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3890" y="3291.64">&#x2192;Ai.exe</tspan></text>
+<text id="-&gt;Reverie" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3885" y="3226.64">&#x2192;Reverie</tspan></text>
+<text id="-&gt;Fishing" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3887" y="2937.64">&#x2192;Fishing</tspan></text>
+<text id="-&gt;Pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3918" y="3007.64">&#x2192;Pig</tspan></text>
+<text id="-&gt;Pig_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3915" y="2792.64">&#x2192;idle</tspan></text>
+<text id="-&gt;Conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="3876" y="3509.64">&#x2192;Conix pdf</tspan></text>
+<rect id="fqge 2" x="3708" y="3846" width="418" height="399" fill="url(#pattern5_4002_637)"/>
+<text id="이상한 나라의 앨리스와 매트릭스에서도 흰 토끼는 다른 세계로 들어가는 입구를 안내한다. 블루스크린은 시스템이 멈춘 자리이자 새로운 세계가 열리는 자리다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="29" font-weight="200" letter-spacing="0em"><tspan x="3745" y="4364.05">&#xc774;&#xc0c1;&#xd55c; &#xb098;&#xb77c;&#xc758; &#xc568;&#xb9ac;&#xc2a4;&#xc640; &#xb9e4;&#xd2b8;&#xb9ad;&#xc2a4;</tspan><tspan x="3745" y="4397.05">&#xc5d0;&#xc11c;&#xb3c4; &#xd770; &#xd1a0;&#xb07c;&#xb294; &#xb2e4;&#xb978; &#xc138;&#xacc4;&#xb85c; &#xb4e4;&#xc5b4;</tspan><tspan x="3745" y="4430.05">&#xac00;&#xb294; &#xc785;&#xad6c;&#xb97c; &#xc548;&#xb0b4;&#xd55c;&#xb2e4;. &#xbe14;&#xb8e8;&#xc2a4;&#xd06c;&#xb9b0;</tspan><tspan x="3745" y="4463.05">&#xc740; &#xc2dc;&#xc2a4;&#xd15c;&#xc774; &#xba48;&#xcd98; &#xc790;&#xb9ac;&#xc774;&#xc790; &#xc0c8;&#xb85c;&#xc6b4; </tspan><tspan x="3745" y="4496.05">&#xc138;&#xacc4;&#xac00; &#xc5f4;&#xb9ac;&#xb294; &#xc790;&#xb9ac;&#xb2e4;. </tspan></text>
+<text id="왜 토끼와 블루스크린인가?" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="52" font-weight="200" letter-spacing="0em"><tspan x="3656" y="3792.41">&#xc65c; &#xd1a0;&#xb07c;&#xc640; &#xbe14;&#xb8e8;&#xc2a4;&#xd06c;&#xb9b0;&#xc778;&#xac00;?</tspan></text>
+</g>
+<g id="contact">
+<rect id="home04" x="7661" y="3598" width="247" height="181" fill="url(#pattern6_4002_637)"/>
+<text id="-&gt;home_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7737" y="3821.27">&#x2192;home</tspan></text>
+<rect id="-&gt;contact" x="7806" y="3739" width="1132" height="757" fill="url(#pattern7_4002_637)"/>
+<rect id="rabbit_youtube 3" x="8003" y="2759" width="240" height="339" fill="url(#pattern8_4002_637)"/>
+<text id="-&gt;youtube" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="38" font-weight="300" letter-spacing="0em" text-decoration="underline"><tspan x="8023" y="3150.82">&#x2192;youtube</tspan></text>
+<text id="exhibitions · commissions · press   conyww@gmail.com Instagram @conylog YouTube @conyca  " fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="7913" y="3268.41">exhibitions &#xb7; commissions &#xb7; press&#10;</tspan><tspan x="7913" y="3305.41">&#xa0;&#10;</tspan><tspan x="7913" y="3342.41">conyww@gmail.com&#10;</tspan><tspan x="7913" y="3379.41">Instagram  @conylog&#10;</tspan><tspan x="7913" y="3416.41">YouTube    @conyca&#10;</tspan><tspan x="7913" y="3453.41">&#xa0;</tspan></text>
+<text id="*** Press any key to continue _" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="34" font-weight="300" letter-spacing="0em"><tspan x="7882" y="3216.86">*** Press any key to continue </tspan><tspan x="7882" y="3267.86">_&#10;</tspan></text>
+</g>
+<g id="prees kit">
+<rect id="home04_2" width="267" height="196" transform="matrix(-1 0 0 1 2358 3607)" fill="url(#pattern9_4002_637)"/>
+<text id="-&gt;home_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="2178" y="3852.27">&#x2192;home</tspan></text>
+<rect id="-&gt;hum youtube" x="2402" y="3385" width="752" height="901" fill="url(#pattern10_4002_637)"/>
+<text id="-&gt;...hum" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="2483" y="3738.27">&#x2192;...hum</tspan></text>
+<text id="-&gt;daydreaming_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="2483" y="3107.64">&#x2192;Conix pdf</tspan></text>
+<text id="-&gt;daydreaming_3" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="2410" y="3180.64">&#x2192;Conix Casino pdf</tspan></text>
+<text id="-&gt;daydreaming_4" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="32" letter-spacing="0em"><tspan x="2410" y="3034.64">&#x2192;Cony blue 2026 pdf</tspan></text>
+<rect id="qqfe9 2" x="2091" y="2414" width="981" height="410" fill="url(#pattern11_4002_637)"/>
+</g>
+<g id="start">
+<rect id="start_cv" x="5443" y="4025" width="267" height="377" fill="url(#pattern12_4002_637)"/>
+<rect id="start_cony" x="5202" y="3542" width="434" height="312" fill="url(#pattern13_4002_637)"/>
+<rect id="-&gt;insta" x="5602" y="3246" width="196" height="204" fill="url(#pattern14_4002_637)"/>
+<rect id="-&gt;work_2" x="4942" y="3984" width="204" height="222" fill="url(#pattern15_4002_637)"/>
+<text id="-&gt;CV" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5561" y="4421.27">&#x2192;CV&#10;</tspan></text>
+<text id="-&gt;youtube_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4949" y="4972.27">&#x2192;youtube</tspan></text>
+<text id="-&gt;Work" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5023" y="4243.27">&#x2192;Work&#10;</tspan></text>
+<text id="-&gt;world" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4996" y="3265.27">&#x2192;world&#10;</tspan></text>
+<text id="-&gt;insta" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5694" y="3490.27">&#x2192;insta</tspan></text>
+<text id="-&gt;press kit" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4863" y="3831.27">&#x2192;press kit</tspan></text>
+<text id="-&gt;conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4923" y="4591.27">&#x2192;conix</tspan></text>
+<text id="-&gt;Contact" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5661" y="4606.27">&#x2192;Contact</tspan></text>
+<rect id="-&gt;cony youtube" x="4830" y="4753" width="387" height="169" fill="url(#pattern16_4002_637)"/>
+<rect id="-&gt;start_2" x="4749" y="3134" width="321" height="94" fill="url(#pattern17_4002_637)"/>
+<rect id="-&gt;contact_2" x="5329" y="4622" width="613" height="410" fill="url(#pattern18_4002_637)"/>
+<rect id="-&gt;conix" x="4863" y="4365" width="207" height="182" fill="url(#pattern19_4002_637)"/>
+<rect id="qqfe9 2_2" x="4419" y="3348" width="981" height="410" fill="url(#pattern20_4002_637)"/>
+<text id="-&gt;mini game" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5329" y="3815.27">&#x2192;mini game</tspan></text>
+</g>
+<g id="cv">
+<text id="Follow the white rabbit" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="79" font-weight="200" letter-spacing="0em"><tspan x="6353" y="2088.73">Follow the white rabbit</tspan></text>
+<rect id="rabbit_youtube 3_2" x="6653" y="2337" width="240" height="339" fill="url(#pattern21_4002_637)"/>
+<rect id="start_cony_2" x="6593" y="3030" width="319" height="229" fill="url(#pattern22_4002_637)"/>
+<text id="Cony (b. 1988) 미디어 아티스트   아무것도 없는 곳에서, 무엇이든 시작된다. 미디어 아티스트 코니의 작업은 텅 빈 블루스크린 위에서 출발한다. AI가 의도를 벗어난 순간 태어난 낯선 얼굴과 꽃, 새들. 그는 이 &#x27;실수&#x27;를 붙잡아 다시 그린다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="200" letter-spacing="0em"><tspan x="6520" y="3339.41">Cony (b. 1988)&#10;</tspan><tspan x="6520" y="3374.41">&#xbbf8;&#xb514;&#xc5b4; &#xc544;&#xd2f0;&#xc2a4;&#xd2b8;&#10;</tspan><tspan x="6520" y="3409.41">&#xa0;&#10;</tspan><tspan x="6520" y="3444.41">&#xc544;&#xbb34;&#xac83;&#xb3c4; &#xc5c6;&#xb294; &#xacf3;&#xc5d0;&#xc11c;, &#xbb34;&#xc5c7;&#xc774;&#xb4e0; &#xc2dc;&#xc791;</tspan><tspan x="6520" y="3479.41">&#xb41c;&#xb2e4;. &#xbbf8;&#xb514;&#xc5b4; &#xc544;&#xd2f0;&#xc2a4;&#xd2b8; &#xcf54;&#xb2c8;&#xc758; &#xc791;&#xc5c5;&#xc740; </tspan><tspan x="6520" y="3514.41">&#xd145; &#xbe48; &#xbe14;&#xb8e8;&#xc2a4;&#xd06c;&#xb9b0; &#xc704;&#xc5d0;&#xc11c; &#xcd9c;&#xbc1c;&#xd55c;&#xb2e4;. AI</tspan><tspan x="6520" y="3549.41">&#xac00; &#xc758;&#xb3c4;&#xb97c; &#xbc97;&#xc5b4;&#xb09c; &#xc21c;&#xac04; &#xd0dc;&#xc5b4;&#xb09c; &#xb0af;&#xc120; &#xc5bc;</tspan><tspan x="6520" y="3584.41">&#xad74;&#xacfc; &#xaf43;, &#xc0c8;&#xb4e4;. &#xadf8;&#xb294; &#xc774; &#39;&#xc2e4;&#xc218;&#39;&#xb97c; &#xbd99;&#xc7a1;&#xc544; </tspan><tspan x="6520" y="3619.41">&#xb2e4;&#xc2dc; &#xadf8;&#xb9b0;&#xb2e4;.</tspan></text>
+<text id="2026 ISEA2026 두바이 국제전자예술심포지엄 학술 프로그램 선정 — AI.exe: Dante&#x27;s Fall, Reverie (연구 논문) 2026 토마토 케첩 피크닉 — 아트 디렉션·비주얼, 24시간 야외 레이브 2025 서울대학교병원 미디어아트 공모 제안 — Get Well Soon 2024 헤이리뮤지엄 몰입형 미디어아트 전시, 파주 2023 에테르노 청담 오프닝 빌딩 프로젝션 — Harp Cartoon Show 2023 미디어아트 전시관 몽환 3면 미디어월, 안산 2023 현대퓨처넷 하트애비뉴 미디어아트 공모 제안 — Gaze 2022 필리핀 아얄라 카지노 몰입형 미디어아트 2022 광화문 미디어아트 공모전 대상, 세종문화회관 — Xoxo Seoul 2022 아트제주 — Goat Song 2021 공공미술 프로젝트 「서울25부작」, 양재천 영동2교, 서초구·문화체육관광부 — No Spoon 외 2021 신세계백화점 대전점 오픈 미디어월 설치 2020 한화 창립 70주년 TV·신문 광고 — 지속가능한 미래 2020 디자인아트페어, 예술의전당 2020 카더가든 「꿈을 꿨어요」 뮤직비디오, 두루두루아티스트컴퍼니 2019 Within the Golden Hour (Cover), 로열 오페라 하우스 2019 Leave Her to Heaven (Cover)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="29" font-weight="300" letter-spacing="0em"><tspan x="6327" y="3902.55">2026  ISEA2026 &#xb450;&#xbc14;&#xc774; &#xad6d;&#xc81c;&#xc804;&#xc790;&#xc608;&#xc220;&#xc2ec;&#xd3ec;&#xc9c0;&#xc5c4; &#xd559;&#xc220; &#xd504;&#xb85c;&#xadf8;&#xb7a8; &#xc120;&#xc815; &#x2014; </tspan><tspan x="6327" y="3938.55">AI.exe: Dante&#39;s Fall, Reverie (&#xc5f0;&#xad6c; &#xb17c;&#xbb38;)&#10;</tspan><tspan x="6327" y="3974.55">2026  &#xd1a0;&#xb9c8;&#xd1a0; &#xcf00;&#xcca9; &#xd53c;&#xd06c;&#xb2c9; &#x2014; &#xc544;&#xd2b8; &#xb514;&#xb809;&#xc158;&#xb7;&#xbe44;&#xc8fc;&#xc5bc;, 24&#xc2dc;&#xac04; &#xc57c;&#xc678; &#xb808;&#xc774;&#xbe0c;&#10;</tspan><tspan x="6327" y="4010.55">2025  &#xc11c;&#xc6b8;&#xb300;&#xd559;&#xad50;&#xbcd1;&#xc6d0; &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8; &#xacf5;&#xbaa8; &#xc81c;&#xc548; &#x2014; Get Well Soon&#10;</tspan><tspan x="6327" y="4046.55">2024  &#xd5e4;&#xc774;&#xb9ac;&#xbba4;&#xc9c0;&#xc5c4; &#xbab0;&#xc785;&#xd615; &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8; &#xc804;&#xc2dc;, &#xd30c;&#xc8fc;&#10;</tspan><tspan x="6327" y="4082.55">2023  &#xc5d0;&#xd14c;&#xb974;&#xb178; &#xccad;&#xb2f4; &#xc624;&#xd504;&#xb2dd; &#xbe4c;&#xb529; &#xd504;&#xb85c;&#xc81d;&#xc158; &#x2014; Harp Cartoon Show&#10;</tspan><tspan x="6327" y="4118.55">2023  &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8; &#xc804;&#xc2dc;&#xad00; &#xbabd;&#xd658; 3&#xba74; &#xbbf8;&#xb514;&#xc5b4;&#xc6d4;, &#xc548;&#xc0b0;&#10;</tspan><tspan x="6327" y="4154.55">2023  &#xd604;&#xb300;&#xd4e8;&#xcc98;&#xb137; &#xd558;&#xd2b8;&#xc560;&#xbe44;&#xb274; &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8; &#xacf5;&#xbaa8; &#xc81c;&#xc548; &#x2014; Gaze&#10;</tspan><tspan x="6327" y="4190.55">2022  &#xd544;&#xb9ac;&#xd540; &#xc544;&#xc584;&#xb77c; &#xce74;&#xc9c0;&#xb178; &#xbab0;&#xc785;&#xd615; &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8;&#10;</tspan><tspan x="6327" y="4226.55">2022  &#xad11;&#xd654;&#xbb38; &#xbbf8;&#xb514;&#xc5b4;&#xc544;&#xd2b8; &#xacf5;&#xbaa8;&#xc804; &#xb300;&#xc0c1;, &#xc138;&#xc885;&#xbb38;&#xd654;&#xd68c;&#xad00; &#x2014; Xoxo Seoul&#10;</tspan><tspan x="6327" y="4262.55">2022  &#xc544;&#xd2b8;&#xc81c;&#xc8fc; &#x2014; Goat Song&#10;</tspan><tspan x="6327" y="4298.55">2021  &#xacf5;&#xacf5;&#xbbf8;&#xc220; &#xd504;&#xb85c;&#xc81d;&#xd2b8; &#x300c;&#xc11c;&#xc6b8;25&#xbd80;&#xc791;&#x300d;, &#xc591;&#xc7ac;&#xcc9c; &#xc601;&#xb3d9;2&#xad50;, &#xc11c;&#xcd08;&#xad6c;&#xb7;&#xbb38;</tspan><tspan x="6327" y="4334.55">&#xd654;&#xccb4;&#xc721;&#xad00;&#xad11;&#xbd80;  &#x2014; No Spoon &#xc678;&#10;</tspan><tspan x="6327" y="4370.55">2021  &#xc2e0;&#xc138;&#xacc4;&#xbc31;&#xd654;&#xc810; &#xb300;&#xc804;&#xc810; &#xc624;&#xd508; &#xbbf8;&#xb514;&#xc5b4;&#xc6d4; &#xc124;&#xce58;&#10;</tspan><tspan x="6327" y="4406.55">2020  &#xd55c;&#xd654; &#xcc3d;&#xb9bd; 70&#xc8fc;&#xb144; TV&#xb7;&#xc2e0;&#xbb38; &#xad11;&#xace0; &#x2014; &#xc9c0;&#xc18d;&#xac00;&#xb2a5;&#xd55c; &#xbbf8;&#xb798;&#10;</tspan><tspan x="6327" y="4442.55">2020  &#xb514;&#xc790;&#xc778;&#xc544;&#xd2b8;&#xd398;&#xc5b4;, &#xc608;&#xc220;&#xc758;&#xc804;&#xb2f9;&#10;</tspan><tspan x="6327" y="4478.55">2020  &#xce74;&#xb354;&#xac00;&#xb4e0; &#x300c;&#xafc8;&#xc744; &#xafe8;&#xc5b4;&#xc694;&#x300d; &#xbba4;&#xc9c1;&#xbe44;&#xb514;&#xc624;, &#xb450;&#xb8e8;&#xb450;&#xb8e8;&#xc544;&#xd2f0;&#xc2a4;&#xd2b8;&#xcef4;&#xd37c;&#xb2c8;&#10;</tspan><tspan x="6327" y="4514.55">2019  Within the Golden Hour (Cover), &#xb85c;&#xc5f4; &#xc624;&#xd398;&#xb77c; &#xd558;&#xc6b0;&#xc2a4;&#10;</tspan><tspan x="6327" y="4550.55">2019  Leave Her to Heaven (Cover)&#10;</tspan></text>
+<rect id="image 11" x="6213" y="4827" width="819" height="664" fill="url(#pattern23_4002_637)"/>
+<rect id="-&gt;start_3" x="6986" y="4799" width="247" height="181" fill="url(#pattern24_4002_637)"/>
+<text id="-&gt;home_4" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7068" y="5033.27">&#x2192;home</tspan></text>
+</g>
+<rect id="image 10" x="5037" y="5574" width="696" height="96" fill="url(#pattern25_4002_637)"/>
+<g id="ai.exe">
+<text id="AI.exe: Dante&#x27;s Fall" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="93" font-weight="200" letter-spacing="0em"><tspan x="1951" y="6250.32">AI.exe: Dante&#39;s Fall</tspan></text>
+<rect id="afqge 1" x="1846" y="6825" width="1026" height="376" fill="url(#pattern26_4002_637)"/>
+<text id="AI.exe: Dante&#x27;s Fall_9&#x27;13&quot;_Single-channel video_Loop_2025 ISEA2026 Dubai, Academic Programme Direction, Video, Music, AI Curation — Cony" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="1951" y="6338.91">AI.exe: Dante&#39;s Fall_9&#39;13&#34;_Single-channel video_Loop_2025&#10;</tspan><tspan x="1951" y="6384.91">ISEA2026 Dubai, Academic Programme&#10;</tspan><tspan x="1951" y="6430.91">Direction, Video, Music, AI Curation &#x2014; Cony</tspan></text>
+<text id=".exe는 실행 파일을 뜻하지만, 실행 파일은 스스로를 실행할 수 없다. 누군가 클릭하지 않으면 정교한 알고리즘도 죽은 코드일 뿐이다.  작품은 단테의 『신곡』 지옥편을 따라 시스템의 중심으로 수직 하강한다. 어두운 숲에서 시작해 혼돈의 도시와 음악 없는 계절을 지나, 중력이 사라진 풍경에 닿고 마지막 화면은 블루스크린로 끈난다. 치명적 오류, 완전한 종료. 이제 어떻게 할 것인가 마우스는 당신 손에 있다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="1926" y="7384.91">.exe&#xb294; &#xc2e4;&#xd589; &#xd30c;&#xc77c;&#xc744; &#xb73b;&#xd558;&#xc9c0;&#xb9cc;, &#xc2e4;&#xd589; &#xd30c;&#xc77c;&#xc740; &#xc2a4;&#xc2a4;&#xb85c;&#xb97c; &#xc2e4;&#xd589;&#xd560; &#xc218; &#xc5c6;&#xb2e4;. &#xb204;</tspan><tspan x="1926" y="7424.91">&#xad70;&#xac00; &#xd074;&#xb9ad;&#xd558;&#xc9c0; &#xc54a;&#xc73c;&#xba74; &#xc815;&#xad50;&#xd55c; &#xc54c;&#xace0;&#xb9ac;&#xc998;&#xb3c4; &#xc8fd;&#xc740; &#xcf54;&#xb4dc;&#xc77c; &#xbfd0;&#xc774;&#xb2e4;.&#10;</tspan><tspan x="1926" y="7464.91">&#xa0;&#xc791;&#xd488;&#xc740; &#xb2e8;&#xd14c;&#xc758; &#x300e;&#xc2e0;&#xace1;&#x300f; &#xc9c0;&#xc625;&#xd3b8;&#xc744; &#xb530;&#xb77c; &#xc2dc;&#xc2a4;&#xd15c;&#xc758; &#xc911;&#xc2ec;&#xc73c;&#xb85c; &#xc218;&#xc9c1; &#xd558;&#xac15;&#xd55c;</tspan><tspan x="1926" y="7504.91">&#xb2e4;. &#xc5b4;&#xb450;&#xc6b4; &#xc232;&#xc5d0;&#xc11c; &#xc2dc;&#xc791;&#xd574; &#xd63c;&#xb3c8;&#xc758; &#xb3c4;&#xc2dc;&#xc640; &#xc74c;&#xc545; &#xc5c6;&#xb294; &#xacc4;&#xc808;&#xc744; &#xc9c0;&#xb098;, &#xc911;&#xb825;&#xc774; </tspan><tspan x="1926" y="7544.91">&#xc0ac;&#xb77c;&#xc9c4; &#xd48d;&#xacbd;&#xc5d0; &#xb2ff;&#xace0; &#xb9c8;&#xc9c0;&#xb9c9; &#xd654;&#xba74;&#xc740; &#xbe14;&#xb8e8;&#xc2a4;&#xd06c;&#xb9b0;&#xb85c; &#xb048;&#xb09c;&#xb2e4;. &#xce58;&#xba85;&#xc801; &#xc624;&#xb958;, </tspan><tspan x="1926" y="7584.91">&#xc644;&#xc804;&#xd55c; &#xc885;&#xb8cc;. &#xc774;&#xc81c; &#xc5b4;&#xb5bb;&#xac8c; &#xd560; &#xac83;&#xc778;&#xac00; &#xb9c8;&#xc6b0;&#xc2a4;&#xb294; &#xb2f9;&#xc2e0; &#xc190;&#xc5d0; &#xc788;&#xb2e4;.</tspan></text>
+<rect id="image 21" x="1941" y="9315" width="866.68" height="487" fill="url(#pattern27_4002_637)"/>
+<text id="AI.exe: Dante&#x27;s Fall, Single-channel Video Still, 04&#x27;10&#x27;&#x27; - The Two Executors: Subversive Laughter against the System._AI Generated, Layered Sensory Synthesis." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="1941" y="9841.41">AI.exe: Dante&#39;s Fall, Single-channel Video Still, 04&#39;10&#39;&#39; - The </tspan><tspan x="1941" y="9876.41">Two Executors: Subversive Laughter against the System._AI </tspan><tspan x="1941" y="9911.41">Generated, Layered Sensory Synthesis.</tspan></text>
+<rect id="image 19" x="1916" y="10372" width="880" height="495" fill="url(#pattern28_4002_637)"/>
+<text id="AI.exe: Dante&#x27;s Fall, Installation View Draft, Immersive Dark Box with Central &#x27;Executor&#x27;s Oasis&#x27; (Giant Bean Bags)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="1907" y="10910.4">AI.exe: Dante&#39;s Fall, Installation View Draft, Immersive Dark Box </tspan><tspan x="1907" y="10945.4">with Central &#39;Executor&#39;s Oasis&#39; (Giant Bean Bags)</tspan></text>
+<rect id="Ai.exe-0003 2 2" x="1938" y="8250" width="872" height="491" fill="url(#pattern29_4002_637)"/>
+<text id="AI.exe: Dante&#x27;s Fall, Single-channel Video Still, 00&#x27;00&#x27;&#x27; - &#x27;Selva Oscura&#x27; (Dark Forest) Initiation._AI Generated, Layered Sensory Synthesis." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="1938" y="8784.41">AI.exe: Dante&#39;s Fall, Single-channel Video Still, 00&#39;00&#39;&#39; - &#39;Selva </tspan><tspan x="1938" y="8819.41">Oscura&#39; (Dark Forest) Initiation._AI Generated, Layered </tspan><tspan x="1938" y="8854.41">Sensory Synthesis.</tspan></text>
+<rect id="-&gt;ai.exe" x="1819" y="11660" width="900" height="660" fill="url(#pattern30_4002_637)"/>
+<text id="-&gt;ai. exe" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="2050" y="11610.3">&#x2192;ai. exe</tspan></text>
+<rect id="-&gt;start_4" width="258" height="189" transform="matrix(-1 0 0 1 2848 11441)" fill="url(#pattern31_4002_637)"/>
+<text id="-&gt;home_5" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="2688" y="11671.3">&#x2192;home</tspan></text>
+</g>
+<g id="pig">
+<rect id="image 12" x="3485" y="6644" width="930" height="552" fill="url(#pattern32_4002_637)"/>
+<text id="Pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="93" font-weight="200" letter-spacing="0em"><tspan x="3854" y="6232.32">Pig </tspan></text>
+<text id="Pig_4&#x27;54&quot;_Single-channel video_Loop_2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="38" font-weight="300" letter-spacing="0em"><tspan x="3509" y="6327.82">Pig_4&#39;54&#34;_Single-channel video_Loop_2026</tspan></text>
+<rect id="image 13" x="3658" y="8115" width="571" height="661" fill="url(#pattern33_4002_637)"/>
+<rect id="-&gt;pig youtube" x="3495" y="9198" width="862" height="907" fill="url(#pattern34_4002_637)"/>
+<rect id="-&gt;start_5" x="4180" y="11326" width="247" height="181" fill="url(#pattern35_4002_637)"/>
+<text id="-&gt;home_6" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4303" y="11554.3">&#x2192;home</tspan></text>
+<rect id="-&gt;pig youtube_2" x="3445" y="11574" width="836" height="509" fill="url(#pattern36_4002_637)"/>
+<text id="-&gt;pig" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="3949" y="11655.3">&#x2192;pig</tspan></text>
+</g>
+<g id="fishing">
+<text id="Fishing" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="93" font-weight="200" letter-spacing="0em"><tspan x="5341" y="6245.32">Fishing</tspan></text>
+<rect id="sfqe 1" x="5153" y="6631" width="686" height="631" fill="url(#pattern37_4002_637)"/>
+<text id="Fishing_2&#x27;22&quot;_Single-channel video_Loop_2026" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="38" font-weight="300" letter-spacing="0em"><tspan x="5064" y="6340.82">Fishing_2&#39;22&#34;_Single-channel video_Loop_2026</tspan></text>
+<rect id="sfqeg 1" x="5158" y="8318" width="730" height="540" fill="url(#pattern38_4002_637)"/>
+<g id="Fishing 반지, 뱀, 혀를 내민 여인, 고리처럼 맞물린 사슬. 블루 위에 떠오르는 것들은 모두 미끼이자 바늘이다. 누군가 낚싯대를 드리우고, 물고기가 미끼를 문다. 그 순간이 끝없이 반복되며 겹쳐 지나간다.  낚시를 하는 것인지, 낚시를 당하는 것인지 그 둘은 구분되지 않는다.">
+<text fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="34" font-weight="300" letter-spacing="0em"><tspan x="5307" y="7573.86">Fishing&#10;</tspan></text>
+<text fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="5307" y="7608.86">&#xbc18;&#xc9c0;, &#xbc40;, &#xd600;&#xb97c; &#xb0b4;&#xbbfc; &#xc5ec;&#xc778;, &#xace0;&#xb9ac;&#xcc98;&#xb7fc; </tspan><tspan x="5307" y="7643.86">&#xb9de;&#xbb3c;&#xb9b0; &#xc0ac;&#xc2ac;. &#xbe14;&#xb8e8; &#xc704;&#xc5d0; &#xb5a0;&#xc624;&#xb974;&#xb294; </tspan><tspan x="5307" y="7678.86">&#xac83;&#xb4e4;&#xc740; &#xbaa8;&#xb450; &#xbbf8;&#xb07c;&#xc774;&#xc790; &#xbc14;&#xb298;&#xc774;&#xb2e4;.&#10;</tspan><tspan x="5307" y="7713.86">&#xb204;&#xad70;&#xac00; &#xb09a;&#xc2ef;&#xb300;&#xb97c; &#xb4dc;&#xb9ac;&#xc6b0;&#xace0;, &#xbb3c;&#xace0;&#xae30;</tspan><tspan x="5307" y="7748.86">&#xac00; &#xbbf8;&#xb07c;&#xb97c; &#xbb38;&#xb2e4;. &#xadf8; &#xc21c;&#xac04;&#xc774; &#xb05d;&#xc5c6;&#xc774; </tspan><tspan x="5307" y="7783.86">&#xbc18;&#xbcf5;&#xb418;&#xba70; &#xacb9;&#xccd0; &#xc9c0;&#xb098;&#xac04;&#xb2e4;. &#x2028;</tspan><tspan x="5307" y="7818.86">&#xb09a;&#xc2dc;&#xb97c; &#xd558;&#xb294; &#xac83;&#xc778;&#xc9c0;, &#xb09a;&#xc2dc;&#xb97c; &#xb2f9;&#xd558;&#xb294; </tspan><tspan x="5307" y="7853.86">&#xac83;&#xc778;&#xc9c0; &#xadf8; &#xb458;&#xc740; &#xad6c;&#xbd84;&#xb418;&#xc9c0; &#xc54a;&#xb294;&#xb2e4;.</tspan></text>
+</g>
+<rect id="레이어 0eqgq 1" x="5226" y="10223" width="593" height="308" fill="url(#pattern39_4002_637)"/>
+<rect id="qfee 1" x="5052" y="11420" width="812" height="258" fill="url(#pattern40_4002_637)"/>
+<rect id="-&gt;start_6" width="258" height="189" transform="matrix(-1 0 0 1 5993 11123)" fill="url(#pattern41_4002_637)"/>
+<text id="-&gt;home_7" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5833" y="11353.3">&#x2192;home</tspan></text>
+<text id="-&gt;fishing" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5257" y="11380.3">&#x2192;fishing</tspan></text>
+</g>
+<g id="daydreaming">
+<text id="Daydreaming" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="93" font-weight="200" letter-spacing="0em"><tspan x="6883" y="6248.32">Daydreaming</tspan></text>
+<g id="Daydreaming_2&#x27;35&quot;_Single-channel video_Loop_2026">
+<text fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="38" font-weight="300" letter-spacing="0em"><tspan x="6937.68" y="6350.82">_2&#39;35&#34;_Single-channel video_Loop_2026</tspan></text>
+<text fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="38" font-weight="300" letter-spacing="0em"><tspan x="6703" y="6350.82">Daydreaming</tspan></text>
+</g>
+<rect id="dfeqe 1" x="6837" y="6555" width="680" height="840" fill="url(#pattern42_4002_637)"/>
+<text id="daydreaming 한낮에 꾸는 꿈. 눈은 뜨고 있지만 마음은 조금 다른 곳에 가 있다. 원하는 것, 즐거운 상상, 아직 오지 않은 장면들 쪽으로.  블루 안의 얼굴들은 겹쳐지고, 고개를 돌리고, 서로에게 기댄다. 하나의 얼굴이 셋으로 번지고, 시선은 어디에도 초점을 맞추지 않는다. 몽롱하지만 멈추지는 않는다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="6931" y="7720.91">daydreaming&#10;</tspan><tspan x="6931" y="7758.91">&#xd55c;&#xb0ae;&#xc5d0; &#xafb8;&#xb294; &#xafc8;. &#xb208;&#xc740; &#xb728;&#xace0; &#xc788;&#xc9c0;&#xb9cc; &#xb9c8;&#xc74c;&#xc740; &#xc870;</tspan><tspan x="6931" y="7796.91">&#xae08; &#xb2e4;&#xb978; &#xacf3;&#xc5d0; &#xac00; &#xc788;&#xb2e4;. &#xc6d0;&#xd558;&#xb294; &#xac83;, &#xc990;&#xac70;&#xc6b4; &#xc0c1;</tspan><tspan x="6931" y="7834.91">&#xc0c1;, &#xc544;&#xc9c1; &#xc624;&#xc9c0; &#xc54a;&#xc740; &#xc7a5;&#xba74;&#xb4e4; &#xcabd;&#xc73c;&#xb85c;.&#x2028;</tspan><tspan x="6931" y="7872.91"> &#xbe14;&#xb8e8; &#xc548;&#xc758; &#xc5bc;&#xad74;&#xb4e4;&#xc740; &#xacb9;&#xccd0;&#xc9c0;&#xace0;, &#xace0;&#xac1c;&#xb97c; &#xb3cc;&#xb9ac;</tspan><tspan x="6931" y="7910.91">&#xace0;, &#xc11c;&#xb85c;&#xc5d0;&#xac8c; &#xae30;&#xb304;&#xb2e4;. &#xd558;&#xb098;&#xc758; &#xc5bc;&#xad74;&#xc774; &#xc14b;&#xc73c;&#xb85c; </tspan><tspan x="6931" y="7948.91">&#xbc88;&#xc9c0;&#xace0;, &#xc2dc;&#xc120;&#xc740; &#xc5b4;&#xb514;&#xc5d0;&#xb3c4; &#xcd08;&#xc810;&#xc744; &#xb9de;&#xcd94;&#xc9c0; &#xc54a;</tspan><tspan x="6931" y="7986.91">&#xb294;&#xb2e4;. &#xbabd;&#xb871;&#xd558;&#xc9c0;&#xb9cc; &#xba48;&#xcd94;&#xc9c0;&#xb294; &#xc54a;&#xb294;&#xb2e4;.</tspan></text>
+<rect id="wfqeg 1" x="6812" y="9183" width="753" height="747" fill="url(#pattern43_4002_637)"/>
+<rect id="qegeq 1" x="6686" y="10538" width="831" height="897" fill="url(#pattern44_4002_637)"/>
+<rect id="-&gt;start_7" width="258" height="189" transform="matrix(-1 0 0 1 7678 10618)" fill="url(#pattern45_4002_637)"/>
+<text id="-&gt;home_8" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7518" y="10848.3">&#x2192;home</tspan></text>
+<text id="-&gt;daydreaming" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="7336" y="11270.3">&#x2192;daydreaming</tspan></text>
+</g>
+<g id="idle">
+<text id="Idle" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="93" font-weight="200" letter-spacing="0em"><tspan x="8672" y="6218.32">Idle</tspan></text>
+<text id="Idle_Parinirvana_2&#x27;31&quot;_Multi-channel video_Loop_2026 Music: Claude Debussy, Rêverie (1890)" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="8401" y="6331.91">Idle_Parinirvana_2&#39;31&#34;_Multi-channel video_Loop_2026&#10;</tspan><tspan x="8401" y="6377.91">Music: Claude Debussy, R&#xea;verie (1890)</tspan></text>
+<rect id="-&gt;idle youtube_2" x="8199" y="8443" width="1194" height="336" fill="url(#pattern46_4002_637)"/>
+<text id="Idle 모두가 같은 자세로 눕는다. 라텍스를 입은 사람, 선글라스를 쓴 사람, 명품 옷을 걸친 사람, 웃는 거인, 호랑이, 강아지까지. 오른쪽으로 누워 한 손으로 머리를 괸다.  서양 회화에서 이 자세는 욕망을 받아내는 오달리스크이고, 동양에서는 모든 욕망을 내려놓은 와불이다. 가장 욕망받는 몸들이 가장 욕망 없는 자세로 누워 있다.  몸은 멈춰 있고 눈동자만 천천히 움직인다. 잠든 것도, 떠난 것도 아니다. 기계로 치면 아이들(Idle), 켜져 있지만 아무것도 실행하지 않는 상태다. 블루스크린이 오기 직전, 모든 것은 이렇게 고요해진다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="8448" y="7674.41">Idle&#10;</tspan><tspan x="8448" y="7713.41">&#xbaa8;&#xb450;&#xac00; &#xac19;&#xc740; &#xc790;&#xc138;&#xb85c; &#xb215;&#xb294;&#xb2e4;. &#xb77c;&#xd14d;&#xc2a4;&#xb97c; &#xc785;&#xc740; &#xc0ac;&#xb78c;, &#xc120;&#xae00;&#xb77c;</tspan><tspan x="8448" y="7752.41">&#xc2a4;&#xb97c; &#xc4f4; &#xc0ac;&#xb78c;, &#xba85;&#xd488; &#xc637;&#xc744; &#xac78;&#xce5c; &#xc0ac;&#xb78c;, &#xc6c3;&#xb294; &#xac70;&#xc778;, &#xd638;&#xb791;&#xc774;, </tspan><tspan x="8448" y="7791.41">&#xac15;&#xc544;&#xc9c0;&#xae4c;&#xc9c0;. &#xc624;&#xb978;&#xcabd;&#xc73c;&#xb85c; &#xb204;&#xc6cc; &#xd55c; &#xc190;&#xc73c;&#xb85c; &#xba38;&#xb9ac;&#xb97c; &#xad38;&#xb2e4;.&#x2028;</tspan><tspan x="8448" y="7830.41"> &#xc11c;&#xc591; &#xd68c;&#xd654;&#xc5d0;&#xc11c; &#xc774; &#xc790;&#xc138;&#xb294; &#xc695;&#xb9dd;&#xc744; &#xbc1b;&#xc544;&#xb0b4;&#xb294; &#xc624;&#xb2ec;&#xb9ac;&#xc2a4;&#xd06c;&#xc774;</tspan><tspan x="8448" y="7869.41">&#xace0;, &#xb3d9;&#xc591;&#xc5d0;&#xc11c;&#xb294; &#xbaa8;&#xb4e0; &#xc695;&#xb9dd;&#xc744; &#xb0b4;&#xb824;&#xb193;&#xc740; &#xc640;&#xbd88;&#xc774;&#xb2e4;. &#xac00;&#xc7a5; &#xc695;</tspan><tspan x="8448" y="7908.41">&#xb9dd;&#xbc1b;&#xb294; &#xbab8;&#xb4e4;&#xc774; &#xac00;&#xc7a5; &#xc695;&#xb9dd; &#xc5c6;&#xb294; &#xc790;&#xc138;&#xb85c; &#xb204;&#xc6cc; &#xc788;&#xb2e4;.&#x2028;</tspan><tspan x="8448" y="7947.41"> &#xbab8;&#xc740; &#xba48;&#xcdb0; &#xc788;&#xace0; &#xb208;&#xb3d9;&#xc790;&#xb9cc; &#xcc9c;&#xcc9c;&#xd788; &#xc6c0;&#xc9c1;&#xc778;&#xb2e4;. &#xc7a0;&#xb4e0; &#xac83;&#xb3c4;, </tspan><tspan x="8448" y="7986.41">&#xb5a0;&#xb09c; &#xac83;&#xb3c4; &#xc544;&#xb2c8;&#xb2e4;. &#xae30;&#xacc4;&#xb85c; &#xce58;&#xba74; &#xc544;&#xc774;&#xb4e4;(Idle), &#xcf1c;&#xc838; &#xc788;&#xc9c0;</tspan><tspan x="8448" y="8025.41">&#xb9cc; &#xc544;&#xbb34;&#xac83;&#xb3c4; &#xc2e4;&#xd589;&#xd558;&#xc9c0; &#xc54a;&#xb294; &#xc0c1;&#xd0dc;&#xb2e4;. &#xbe14;&#xb8e8;&#xc2a4;&#xd06c;&#xb9b0;&#xc774; &#xc624;&#xae30; </tspan><tspan x="8448" y="8064.41">&#xc9c1;&#xc804;, &#xbaa8;&#xb4e0; &#xac83;&#xc740; &#xc774;&#xb807;&#xac8c; &#xace0;&#xc694;&#xd574;&#xc9c4;&#xb2e4;.</tspan></text>
+<rect id="brick factory 1-0012 1" x="8204" y="9214" width="1184" height="333" fill="url(#pattern47_4002_637)"/>
+<rect id="brick factory 1-0003 1" x="8237" y="10015" width="1117" height="314" fill="url(#pattern48_4002_637)"/>
+<rect id="brick factory 1-0008 1" x="8286" y="10835" width="1020.44" height="287" fill="url(#pattern49_4002_637)"/>
+<text id="-&gt;idle_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="8776" y="12242.3">&#x2192;idle</tspan></text>
+<rect id="qqfe12 2" x="8108" y="11594" width="1168" height="784" fill="url(#pattern50_4002_637)"/>
+<rect id="-&gt;start_8" x="9059" y="11805" width="247" height="181" fill="url(#pattern51_4002_637)"/>
+<text id="-&gt;home_9" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="9182" y="12033.3">&#x2192;home</tspan></text>
+</g>
+<rect id="image 25" x="3529" y="10714" width="852" height="322" fill="url(#pattern52_4002_637)"/>
+<text id="Pig 블루 안에 초상화, 벌새, 흰 프리지아, 치즈케이크가 떠다닌다. 모두 내가 사랑하는 사람이 좋아하는 것들이고, AI가 의도에서 벗어나 만들어낸 이미지들이다. 그녀는 돼지띠다. 블루스크린은 모든 것이 끝나는 곳이지만 다시 처음이 온다." fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="30" font-weight="300" letter-spacing="0em"><tspan x="3728" y="7351.41">Pig&#10;</tspan><tspan x="3728" y="7390.41">&#xbe14;&#xb8e8; &#xc548;&#xc5d0; &#xcd08;&#xc0c1;&#xd654;, &#xbc8c;&#xc0c8;, &#xd770; &#xd504;&#xb9ac;&#xc9c0;&#xc544;, </tspan><tspan x="3728" y="7429.41">&#xce58;&#xc988;&#xcf00;&#xc774;&#xd06c;&#xac00; &#xb5a0;&#xb2e4;&#xb2cc;&#xb2e4;. &#xbaa8;&#xb450; &#xb0b4;&#xac00; </tspan><tspan x="3728" y="7468.41">&#xc0ac;&#xb791;&#xd558;&#xb294; &#xc0ac;&#xb78c;&#xc774; &#xc88b;&#xc544;&#xd558;&#xb294; &#xac83;&#xb4e4;&#xc774;&#xace0;, </tspan><tspan x="3728" y="7507.41">AI&#xac00; &#xc758;&#xb3c4;&#xc5d0;&#xc11c; &#xbc97;&#xc5b4;&#xb098; &#xb9cc;&#xb4e4;&#xc5b4;&#xb0b8; &#xc774;&#xbbf8;</tspan><tspan x="3728" y="7546.41">&#xc9c0;&#xb4e4;&#xc774;&#xb2e4;. &#xadf8;&#xb140;&#xb294; &#xb3fc;&#xc9c0;&#xb760;&#xb2e4;. &#xbe14;&#xb8e8;&#xc2a4;</tspan><tspan x="3728" y="7585.41">&#xd06c;&#xb9b0;&#xc740; &#xbaa8;&#xb4e0; &#xac83;&#xc774; &#xb05d;&#xb098;&#xb294; &#xacf3;&#xc774;&#xc9c0;&#xb9cc; </tspan><tspan x="3728" y="7624.41">&#xb2e4;&#xc2dc; &#xcc98;&#xc74c;&#xc774; &#xc628;&#xb2e4;.</tspan></text>
+<rect id="-&gt;idle youtube_3" x="8293" y="6718" width="1011" height="542" fill="url(#pattern53_4002_637)"/>
+<rect id="efqegee 1" x="6784" y="8412" width="785" height="259" fill="url(#pattern54_4002_637)"/>
+<rect id="fqgeq 1" x="5040" y="9295" width="911" height="269" fill="url(#pattern55_4002_637)"/>
+</g>
+<defs>
+<pattern id="pattern0_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image0_4002_637" transform="scale(0.0025641 0.00134048)"/>
+</pattern>
+<pattern id="pattern1_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image1_4002_637" transform="scale(0.000648088 0.00271739)"/>
+</pattern>
+<pattern id="pattern2_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image2_4002_637" transform="matrix(0.00156006 0 0 0.0014377 0 -0.00104004)"/>
+</pattern>
+<pattern id="pattern3_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern4_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image4_4002_637" transform="scale(0.00245098 0.00227376)"/>
+</pattern>
+<pattern id="pattern5_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image5_4002_637" transform="matrix(0.0019362 0 0 0.0020284 -0.000507099 0)"/>
+</pattern>
+<pattern id="pattern6_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern7_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_4002_637" transform="scale(0.00110169 0.00164745)"/>
+</pattern>
+<pattern id="pattern8_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image7_4002_637" transform="matrix(0.00320513 0 0 0.00226912 0 -0.000340368)"/>
+</pattern>
+<pattern id="pattern9_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="matrix(0.00173953 0 0 0.00236967 -0.000985143 0)"/>
+</pattern>
+<pattern id="pattern10_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image8_4002_637" transform="matrix(0.00258219 0 0 0.00215517 -0.388275 0)"/>
+</pattern>
+<pattern id="pattern11_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image9_4002_637" transform="matrix(0.000789889 0 0 0.00188995 0 -0.170934)"/>
+</pattern>
+<pattern id="pattern12_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image7_4002_637" transform="matrix(0.00320513 0 0 0.00226994 0 -0.000522852)"/>
+</pattern>
+<pattern id="pattern13_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image10_4002_637" transform="matrix(0.00159236 0 0 0.00221501 0 -0.00059203)"/>
+</pattern>
+<pattern id="pattern14_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image11_4002_637" transform="scale(0.0015748 0.00151305)"/>
+</pattern>
+<pattern id="pattern15_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image2_4002_637" transform="matrix(0.00156131 0 0 0.00143472 -0.000400878 0)"/>
+</pattern>
+<pattern id="pattern16_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image12_4002_637" transform="matrix(0.000856164 0 0 0.00196057 0 -0.268542)"/>
+</pattern>
+<pattern id="pattern17_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image13_4002_637" transform="matrix(0.000977517 0 0 0.00333812 0 -0.000717539)"/>
+</pattern>
+<pattern id="pattern18_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image6_4002_637" transform="matrix(0.00110188 0 0 0.00164745 -0.00025397 0)"/>
+</pattern>
+<pattern id="pattern19_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image14_4002_637" transform="matrix(0.0021763 0 0 0.00247525 -0.000550055 0)"/>
+</pattern>
+<pattern id="pattern20_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image9_4002_637" transform="matrix(0.000789889 0 0 0.00188995 0 -0.170934)"/>
+</pattern>
+<pattern id="pattern21_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image7_4002_637" transform="matrix(0.00320513 0 0 0.00226912 0 -0.000340368)"/>
+</pattern>
+<pattern id="pattern22_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image10_4002_637" transform="matrix(0.00159236 0 0 0.00221817 0 -0.00130726)"/>
+</pattern>
+<pattern id="pattern23_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image15_4002_637" transform="scale(0.000490766 0.000605327)"/>
+</pattern>
+<pattern id="pattern24_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern25_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image16_4002_637" transform="matrix(0.000516529 0 0 0.00374483 0 -0.00180785)"/>
+</pattern>
+<pattern id="pattern26_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image17_4002_637" transform="scale(0.000862286 0.00235294)"/>
+</pattern>
+<pattern id="pattern27_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image18_4002_637" transform="scale(0.000260146 0.000462963)"/>
+</pattern>
+<pattern id="pattern28_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image19_4002_637" transform="scale(0.000520833 0.000925926)"/>
+</pattern>
+<pattern id="pattern29_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image20_4002_637" transform="matrix(0.000521364 0 0 0.000925926 -0.000509684 0)"/>
+</pattern>
+<pattern id="pattern30_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image21_4002_637" transform="matrix(0.000730994 0 0 0.00099681 0 -0.000398724)"/>
+</pattern>
+<pattern id="pattern31_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173611 0.00236993)"/>
+</pattern>
+<pattern id="pattern32_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image22_4002_637" transform="scale(0.000413335 0.000696379)"/>
+</pattern>
+<pattern id="pattern33_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image23_4002_637" transform="matrix(0.000573078 0 0 0.00049505 -0.000297376 0)"/>
+</pattern>
+<pattern id="pattern34_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image24_4002_637" transform="scale(0.000550316 0.000523013)"/>
+</pattern>
+<pattern id="pattern35_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern36_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image25_4002_637" transform="scale(0.000666869 0.00109529)"/>
+</pattern>
+<pattern id="pattern37_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image26_4002_637" transform="scale(0.00101751 0.00110619)"/>
+</pattern>
+<pattern id="pattern38_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image27_4002_637" transform="scale(0.000832088 0.00112486)"/>
+</pattern>
+<pattern id="pattern39_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image28_4002_637" transform="matrix(0.00100853 0 0 0.00194175 -0.000735114 0)"/>
+</pattern>
+<pattern id="pattern40_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image29_4002_637" transform="scale(0.000610128 0.00192025)"/>
+</pattern>
+<pattern id="pattern41_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173611 0.00236993)"/>
+</pattern>
+<pattern id="pattern42_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image30_4002_637" transform="scale(0.00117925 0.000954627)"/>
+</pattern>
+<pattern id="pattern43_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image31_4002_637" transform="matrix(0.000949313 0 0 0.000956938 -0.000287844 0)"/>
+</pattern>
+<pattern id="pattern44_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image32_4002_637" transform="scale(0.00105412 0.000976562)"/>
+</pattern>
+<pattern id="pattern45_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173611 0.00236993)"/>
+</pattern>
+<pattern id="pattern46_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image33_4002_637" transform="matrix(0.000521124 0 0 0.00185185 -0.000279174 0)"/>
+</pattern>
+<pattern id="pattern47_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image34_4002_637" transform="scale(0.000520833 0.00185185)"/>
+</pattern>
+<pattern id="pattern48_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image35_4002_637" transform="matrix(0.000520833 0 0 0.00185277 0 -0.000248806)"/>
+</pattern>
+<pattern id="pattern49_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image36_4002_637" transform="scale(0.000520833 0.00185185)"/>
+</pattern>
+<pattern id="pattern50_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image37_4002_637" transform="scale(0.000856164 0.00127551)"/>
+</pattern>
+<pattern id="pattern51_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image3_4002_637" transform="scale(0.00173648 0.00236967)"/>
+</pattern>
+<pattern id="pattern52_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image38_4002_637" transform="matrix(0.000419927 0 0 0.00111111 -0.000552947 0)"/>
+</pattern>
+<pattern id="pattern53_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image39_4002_637" transform="matrix(0.000601323 0 0 0.00112166 0 -0.000258502)"/>
+</pattern>
+<pattern id="pattern54_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image40_4002_637" transform="scale(0.000664011 0.00201254)"/>
+</pattern>
+<pattern id="pattern55_4002_637" patternContentUnits="objectBoundingBox" width="1" height="1">
+<use xlink:href="#image41_4002_637" transform="matrix(0.000588207 0 0 0.00199203 -0.00115236 0)"/>
+</pattern>
+<image id="image0_4002_637" data-name="sfqee.png" width="390" height="746" preserveAspectRatio="none" href="img/image0.webp"/>
+<image id="image1_4002_637" data-name="feqgqq.png" width="1543" height="368" preserveAspectRatio="none" href="img/image1.webp"/>
+<image id="image2_4002_637" data-name="Papers_54.png" width="641" height="697" preserveAspectRatio="none" href="img/image2.webp"/>
+<image id="image3_4002_637" data-name="sdqfaaa.png" width="576" height="422" preserveAspectRatio="none" href="img/image3.webp"/>
+<image id="image4_4002_637" data-name="sfgwrww.png" width="408" height="440" preserveAspectRatio="none" href="img/image4.webp"/>
+<image id="image5_4002_637" data-name="fqge.png" width="517" height="493" preserveAspectRatio="none" href="img/image5.webp"/>
+<image id="image6_4002_637" data-name="geee.png" width="908" height="607" preserveAspectRatio="none" href="img/image6.webp"/>
+<image id="image7_4002_637" data-name="rabbit_youtube.png" width="312" height="441" preserveAspectRatio="none" href="img/image7.webp"/>
+<image id="image8_4002_637" data-name="grok-video-069e7e7e-fe8a-4905-8458-21ac5be437c4-0003.png" width="688" height="464" preserveAspectRatio="none" href="img/image8.webp"/>
+<image id="image9_4002_637" data-name="qqfe9.png" width="1266" height="710" preserveAspectRatio="none" href="img/image9.webp"/>
+<image id="image10_4002_637" data-name="conyyyy.png" width="628" height="452" preserveAspectRatio="none" href="img/image10.webp"/>
+<image id="image11_4002_637" data-name="qefe.png" width="635" height="661" preserveAspectRatio="none" href="img/image11.webp"/>
+<image id="image12_4002_637" data-name="c282812e-e35f-469c-96b9-accb7fc3b12f.png" width="1168" height="784" preserveAspectRatio="none" href="img/image12.webp"/>
+<image id="image13_4002_637" data-name="레이어 1 복사본.png" width="1023" height="300" preserveAspectRatio="none" href="img/image13.webp"/>
+<image id="image14_4002_637" data-name="sgrgwwq.png" width="460" height="404" preserveAspectRatio="none" href="img/image14.webp"/>
+<image id="image15_4002_637" data-name="image.png" width="2038" height="1652" preserveAspectRatio="none" href="img/image15.webp"/>
+<image id="image16_4002_637" data-name="image.png" width="1936" height="268" preserveAspectRatio="none" href="img/image16.webp"/>
+<image id="image17_4002_637" data-name="afqge.png" width="1160" height="425" preserveAspectRatio="none" href="img/image17.webp"/>
+<image id="image18_4002_637" data-name="image.png" width="3844" height="2160" preserveAspectRatio="none" href="img/image18.webp"/>
+<image id="image19_4002_637" data-name="image.png" width="1920" height="1080" preserveAspectRatio="none" href="img/image19.webp"/>
+<image id="image20_4002_637" data-name="Ai.exe-0003 2.png" width="1920" height="1080" preserveAspectRatio="none" href="img/image20.webp"/>
+<image id="image21_4002_637" data-name="ai.exe.png" width="1368" height="1004" preserveAspectRatio="none" href="img/image21.webp"/>
+<image id="image22_4002_637" data-name="image.png" width="2420" height="1436" preserveAspectRatio="none" href="img/image22.webp"/>
+<image id="image23_4002_637" data-name="image.png" width="1746" height="2020" preserveAspectRatio="none" href="img/image23.webp"/>
+<image id="image24_4002_637" data-name="image.png" width="1818" height="1912" preserveAspectRatio="none" href="img/image24.webp"/>
+<image id="image25_4002_637" data-name="image.png" width="1500" height="913" preserveAspectRatio="none" href="img/image25.webp"/>
+<image id="image26_4002_637" data-name="sfqe.png" width="983" height="904" preserveAspectRatio="none" href="img/image26.webp"/>
+<image id="image27_4002_637" data-name="sfqeg.png" width="1202" height="889" preserveAspectRatio="none" href="img/image27.webp"/>
+<image id="image28_4002_637" data-name="레이어 0eqgq.png" width="993" height="515" preserveAspectRatio="none" href="img/image28.webp"/>
+<image id="image29_4002_637" data-name="qfee.png" width="1639" height="521" preserveAspectRatio="none" href="img/image29.webp"/>
+<image id="image30_4002_637" data-name="dfeqe.png" width="848" height="1048" preserveAspectRatio="none" href="img/image30.webp"/>
+<image id="image31_4002_637" data-name="wfqeg.png" width="1054" height="1045" preserveAspectRatio="none" href="img/image31.webp"/>
+<image id="image32_4002_637" data-name="qegeq.png" width="949" height="1024" preserveAspectRatio="none" href="img/image32.webp"/>
+<image id="image33_4002_637" data-name="brick factory 1-0002.png" width="1920" height="540" preserveAspectRatio="none" href="img/image33.webp"/>
+<image id="image34_4002_637" data-name="brick factory 1-0012.png" width="1920" height="540" preserveAspectRatio="none" href="img/image34.webp"/>
+<image id="image35_4002_637" data-name="brick factory 1-0003.png" width="1920" height="540" preserveAspectRatio="none" href="img/image35.webp"/>
+<image id="image36_4002_637" data-name="brick factory 1-0008.png" width="1920" height="540" preserveAspectRatio="none" href="img/image36.webp"/>
+<image id="image37_4002_637" data-name="qqfe12.png" width="1168" height="784" preserveAspectRatio="none" href="img/image37.webp"/>
+<image id="image38_4002_637" data-name="image.png" width="2384" height="900" preserveAspectRatio="none" href="img/image38.webp"/>
+<image id="image39_4002_637" data-name="dgqge.png" width="1663" height="892" preserveAspectRatio="none" href="img/image39.webp"/>
+<image id="image40_4002_637" data-name="efqegee.png" width="1506" height="497" preserveAspectRatio="none" href="img/image40.webp"/>
+<image id="image41_4002_637" data-name="fqgeq.png" width="1704" height="502" preserveAspectRatio="none" href="img/image41.webp"/>
+</defs>
+</svg>
+
+<script>
+(() => {
+  const svg = document.getElementById('map');
+  const [ , , W, H] = svg.getAttribute('viewBox').split(' ').map(Number);   // world size in design units
+  const OLD = 'https://6fpqxhvkv9-sudo.github.io/follow-the-white-rabbit/';
+  const CHANNEL = 'https://www.youtube.com/@conyca';
+  const INSTA = 'https://www.instagram.com/conylog/';
+
+  // ---------- videos (from the "youtube link" boards in Figma) ----------
+  const V = {
+    hum:         { t:'...hum',                                   ids:['yCPTT2HWdvk'] },
+    pig:         { t:'Pig',                                      ids:['IrTLmfbwePg'] },
+    idle:        { t:'Idle_Parinirvana',                         ids:['blA9iTVe8TI'] },
+    soak:        { t:'Fred again.. & SOAK — just stand there',   ids:['IOCjpTBeIjA'] },
+    softmax:     { t:'softmax',                                  ids:['iNObYr0SnUw'] },
+    aiexe:       { t:"AI.exe: Dante's Fall",                     ids:['sqpTtHn77H0'] },
+    daydreaming: { t:'Daydreaming',                              ids:['w6UZ7NvDK2I'] },
+    fishing:     { t:'Fishing',                                  ids:['yxRHQTA8Gwg'] },
+    c2024: { t:'Conix · 2024 Immersive Media Art Exhibition', ids:['6OpkB-lz9hk','nzmCq_-Nxlk','kCH97zbiE1c','S-TfLBCw6uo'] },
+    c2023: { t:'Conix · 2023 Eterno Cheongdam',                ids:['isNzzi5xa_I'] },
+    c2022: { t:'Conix · 2022 Gwanghwamun Media Façade',        ids:['TuihqC3i9so'] },
+    c2021: { t:'Conix · 2021 Jungnangcheon Media Façade',      ids:['PM5W47_SsBk'] },
+    c2020: { t:'Conix · 2020 Design Art Fair · Hanwha',        ids:['T--U8d66kik','WrPnNnTwQzQ','cqnSwPXFdDc'] },
+    c2019: { t:'Conix · 2019 Carder Garden',                   ids:['8W_nrbswn4k'] }
+  };
+
+  // ---------- where each named layer goes ----------
+  const ROOMS = ['start','cv','work','contact','prees kit','ai.exe','pig','fishing','daydreaming','idle'];
+  const PDF = {
+    cony2026: { t:'Cony — Blue 2026',   dir:'pdf/cony2026', n:36, file:'pdf/Cony_blue_2026.pdf' },
+    conix:    { t:'Conix',              dir:'pdf/conix',    n:15, file:'pdf/Conix.pdf' },
+    casino:   { t:'Casino Cony 2022',   dir:'pdf/casino',   n:23, file:'pdf/Casino_Cony_2022.pdf' }
+  };
+  const LINKS = {
+    // start
+    '->insta':   { url:INSTA, label:'Instagram' },
+    '->cony youtube': { url:CHANNEL, label:'YouTube channel' }, '->youtube_2': { url:CHANNEL, label:'YouTube channel' },
+    '->work_2':  { room:'work' },    '->Work':    { room:'work' },
+    '->contact_2': { room:'contact' }, '->Contact': { room:'contact' },
+    'start_cv':  { room:'cv' },      '->CV':      { room:'cv' },
+    '->start_2': { world:true, label:'See the whole world' }, '->world': { world:true, label:'See the whole world' },
+    'qqfe9 2_2': { room:'prees kit', label:'Press kit' }, '->press kit': { room:'prees kit', label:'Press kit' },
+    'start_cony': { game:true, label:'Play East Blue' }, '->mini game': { game:true, label:'Play East Blue' },
+    '->conix':   { pdf:'conix' },
+    // work list
+    '->Pig_2':       { room:'idle' },          // the "→idle" line
+    '->Pig':         { room:'pig' },
+    '->Fishing':     { room:'fishing' },
+    '->daydreaming': { room:'daydreaming' },
+    '->Ai.exe':      { room:'ai.exe' },
+    '->Conix':       { pdf:'conix' },
+    '->Reverie':     { url: OLD + 'Reverie.pdf', label:'Reverie (PDF)' },
+    '->54':          { url: OLD + 'timeline.html', label:'54' },
+    '->sotrmax youtube': { v:'softmax' }, '->softmax': { v:'softmax' },
+    // press kit
+    '->daydreaming_4': { pdf:'cony2026' },
+    '->daydreaming_2': { pdf:'conix' },
+    '->daydreaming_3': { pdf:'casino' },
+    '->hum youtube': { v:'hum' }, '->...hum': { v:'hum' },
+    // contact
+    '->contact':     { url:'mailto:conyww@gmail.com', label:'Email' },
+    'rabbit_youtube 3': { url:CHANNEL, label:'YouTube channel' }, '->youtube': { url:CHANNEL, label:'YouTube channel' },
+    // works
+    '->ai.exe': { v:'aiexe' }, '->ai. exe': { v:'aiexe' },
+    '->pig youtube': { v:'pig' }, '->pig youtube_2': { v:'pig' }, '->pig': { v:'pig' },
+    'qfee 1': { v:'fishing' }, '->fishing': { v:'fishing' },
+    'qegeq 1': { v:'daydreaming' },
+    '->idle youtube': { v:'idle' }, '->idle youtube_2': { v:'idle' }, '->idle youtube_3': { v:'idle' },
+    '->idle': { v:'idle' }, '->idle_2': { v:'idle' }, 'qqfe12 2': { v:'idle' },
+    'dance': { v:'soak' }, '->just stand there': { v:'soak' }
+  };
+  // same layer name used twice in Figma: decide by the room it sits in
+  const IN_ROOM = { daydreaming: { '->daydreaming': { v:'daydreaming' } } };
+  const isHome = id => /^->(start|home)(_\d+)?$/.test(id) || /^home0\d(_\d+)?$/.test(id);
+
+  const tag = (el, a, label) => {
+    el.dataset.act = JSON.stringify(a);
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', (a.v || a.pdf) ? 'button' : 'link');
+    el.setAttribute('aria-label', label || a.label || (a.v ? V[a.v].t : a.pdf ? PDF[a.pdf].t : a.room) || 'Home');
+  };
+  svg.querySelectorAll('[id]').forEach(el => {
+    const id = el.getAttribute('id');
+    const room = ROOMS.find(r => el.closest(`g[id="${r}"]`));
+    let a = (IN_ROOM[room] || {})[id] || LINKS[id];
+    if (!a && id.startsWith('->Fred again')) a = { v:'soak' };
+    if (!a && isHome(id)) a = { home:true, label:'Home' };
+    if (a) tag(el, a);
+  });
+  // home buttons sit under big images in a few rooms: bring them to the front so they stay tappable
+  svg.querySelectorAll('[data-act]').forEach(el => {
+    if (JSON.parse(el.dataset.act).home) el.parentNode.appendChild(el);
+  });
+  // single lines inside text blocks
+  const LINE_LINKS = [
+    [/conyww@gmail\.com/, { url:'mailto:conyww@gmail.com', label:'Email' }],
+    [/YouTube\s+@conyca/, { url:CHANNEL, label:'YouTube channel' }],
+    [/Instagram\s+@conylog/, { url:INSTA, label:'Instagram' }]
+  ];
+  svg.querySelectorAll('tspan').forEach(t => {
+    for (const [re, a] of LINE_LINKS) if (re.test(t.textContent)) { t.dataset.act = JSON.stringify(a); t.setAttribute('role', 'link'); }
+  });
+
+  // ---------- room rectangles ----------
+  const rooms = {}; window.__rooms = rooms;
+  function measureRooms() {
+    const inv = svg.getScreenCTM().inverse();
+    const wb = el => {                      // element box in world units, transforms included
+      const r = el.getBoundingClientRect(); if (!r.width) return null;
+      const a = new DOMPoint(r.left, r.top).matrixTransform(inv), z = new DOMPoint(r.right, r.bottom).matrixTransform(inv);
+      return { x:a.x, y:a.y, width:z.x - a.x, height:z.y - a.y };
+    };
+    ROOMS.forEach(id => {
+      const g = document.getElementById(id); if (!g) return;
+      const clip = g.getAttribute('clip-path');
+      if (clip) {
+        const r = svg.querySelector(clip.slice(4, -1) + ' rect');
+        const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(r.getAttribute('transform') || '');
+        rooms[id] = { x:+m[1], y:+m[2], w:+r.getAttribute('width'), h:+r.getAttribute('height') };
+        return;
+      }
+      let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+      [...g.children].forEach(c => {
+        const b = wb(c); if (!b || b.width > 1250) return;   // skip things spilling out on purpose
+        x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+      });
+      const cx = (x0 + x1) / 2, w = Math.max(1080, x1 - x0 + 40);
+      rooms[id] = { x: cx - w/2, y: y0 - 110, w, h: Math.max(1920, y1 - y0 + 180) };
+    });
+  }
+
+  // ---------- camera: x,y = world point at the top-left of the screen, s = screen px per unit ----------
+  const cam = { x:0, y:0, s:0.1 };
+  const vw = () => innerWidth, vh = () => innerHeight;
+  const apply = () => svg.setAttribute('viewBox', `${cam.x} ${cam.y} ${vw()/cam.s} ${vh()/cam.s}`);
+  const minS = () => Math.min(vw()/W, vh()/H) * 0.6, maxS = 3;
+  const clampS = s => Math.max(minS(), Math.min(maxS, s));
+
+  function roomView(id) {
+    const r = rooms[id]; const pad = 1.04;
+    const s = Math.min(vw() / (r.w * pad), vh() / 1920);
+    const x = r.x + r.w/2 - vw()/s/2;
+    const showH = Math.min(r.h, 1920);
+    const y = vh()/s > showH ? r.y + showH/2 - vh()/s/2 : r.y;
+    return { x, y, s };
+  }
+  function worldView() {
+    const s = Math.min(vw()/W, vh()/H) * 0.96;
+    return { s, x: W/2 - vw()/s/2, y: H/2 - vh()/s/2 };
+  }
+
+  let raf = 0, here = 'start';
+  const eyes = document.getElementById('eyes');
+  const setHere = h => { here = h; eyes.setAttribute('aria-label', h === 'start' ? 'See the whole world' : 'Back to start'); };
+  function go(t, anim = true) {
+    cancelAnimationFrame(raf);
+    if (!anim || matchMedia('(prefers-reduced-motion: reduce)').matches) { Object.assign(cam, t); apply(); return; }
+    const f = { ...cam }, t0 = performance.now();
+    const fc = { x: f.x + vw()/f.s/2, y: f.y + vh()/f.s/2 }, tc = { x: t.x + vw()/t.s/2, y: t.y + vh()/t.s/2 };
+    const dist = Math.hypot(tc.x - fc.x, tc.y - fc.y) * Math.min(f.s, t.s);
+    const dur = Math.min(1400, 650 + dist * 0.25);
+    const ease = k => k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3) / 2;
+    const dip = Math.min(0.55, dist / 4000);   // pull back a little on long trips so you see where you're going
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = ease(k);
+      const s = Math.exp(Math.log(f.s) + (Math.log(t.s) - Math.log(f.s)) * e - dip * Math.sin(Math.PI * e));
+      const cx = fc.x + (tc.x - fc.x) * e, cy = fc.y + (tc.y - fc.y) * e;
+      cam.s = s; cam.x = cx - vw()/s/2; cam.y = cy - vh()/s/2; apply();
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+  const toRoom = (id, anim = true) => { if (!rooms[id]) return; setHere(id); go(roomView(id), anim); };
+  const toWorld = () => { setHere(null); go(worldView()); };
+  const home = () => (here === 'start' ? toWorld() : toRoom('start'));
+  eyes.addEventListener('click', home);
+
+  // ---------- video window ----------
+  const player = document.getElementById('player'), screen = document.getElementById('screen');
+  const ttl = document.getElementById('ttl'), yt = document.getElementById('yt');
+  const nav = document.getElementById('nav'), count = document.getElementById('count');
+  const prev = document.getElementById('prev'), next = document.getElementById('next');
+  let list = null, idx = 0, lastFocus = null, openedAt = 0;
+  // one window for both: a YouTube list, or the pages of a PDF
+  function show(i) {
+    idx = i;
+    const many = list.n > 1;
+    if (list.pdf) {
+      let img = screen.querySelector('img');
+      if (!img) { screen.innerHTML = ''; img = document.createElement('img'); img.alt = ''; screen.appendChild(img); }
+      img.src = `${list.dir}/${String(i + 1).padStart(2, '0')}.webp`;
+      img.alt = `${list.t} — ${i + 1} / ${list.n}`;
+      [i + 1, i + 2].forEach(k => { if (k < list.n) new Image().src = `${list.dir}/${String(k + 1).padStart(2, '0')}.webp`; });
+      yt.textContent = 'PDF ↓'; yt.href = list.file; yt.setAttribute('download', '');
+    } else {
+      const id = list.ids[i];
+      screen.innerHTML = '';
+      const f = document.createElement('iframe');
+      f.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+      f.title = list.t; f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'; f.allowFullscreen = true;
+      screen.appendChild(f);
+      yt.textContent = 'YouTube ↗'; yt.href = 'https://youtu.be/' + id; yt.removeAttribute('download');
+    }
+    ttl.textContent = list.t;
+    nav.classList.toggle('on', many);
+    if (many) { count.textContent = `${i + 1} / ${list.n}`; prev.disabled = i === 0; next.disabled = i === list.n - 1; }
+  }
+  function openWin(l) {
+    list = l;
+    lastFocus = document.activeElement;
+    player.classList.toggle('pdf', !!l.pdf);
+    player.classList.add('on'); openedAt = Date.now(); show(0);
+    player.querySelector('[data-close]').focus();
+  }
+  const openVideo = key => V[key] && openWin({ ...V[key], n: V[key].ids.length });
+  const openPdf = key => PDF[key] && openWin({ ...PDF[key], pdf: true });
+  function closeVideo() {
+    if (!player.classList.contains('on')) return false;
+    player.classList.remove('on'); screen.innerHTML = ''; list = null;
+    lastFocus?.focus?.(); return true;
+  }
+  player.addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) closeVideo();
+    else if (e.target === player && Date.now() - openedAt > 500) closeVideo();   // ignore the tap that opened it
+  });
+  const step = d => { if (list && idx + d >= 0 && idx + d < list.n) show(idx + d); };
+  prev.addEventListener('click', () => step(-1));
+  next.addEventListener('click', () => step(1));
+  // PDF pages: tap the left / right half, or swipe
+  let sx = null;
+  screen.addEventListener('click', e => { if (!list?.pdf) return; const r = screen.getBoundingClientRect(); step(e.clientX < r.left + r.width / 2 ? -1 : 1); });
+  screen.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive:true });
+  screen.addEventListener('touchend', e => { if (sx == null || !list?.pdf) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 40) { e.preventDefault(); step(dx < 0 ? 1 : -1); } });
+  player.addEventListener('wheel', e => e.stopPropagation(), { passive:true });
+
+  function openUrl(url) {
+    if (url.startsWith('mailto:')) { location.href = url; return; }
+    const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  // CONY -> East Blue: everything fades into the plain blue, then the rabbit's world loads
+  function enterGame() {
+    const f = document.createElement('div');
+    f.style.cssText = 'position:fixed;inset:0;z-index:50;background:var(--blue);opacity:0;transition:opacity .5s ease;pointer-events:none';
+    document.body.appendChild(f);
+    requestAnimationFrame(() => { f.style.opacity = '1'; });
+    setTimeout(() => { location.href = '../eastblue/?v=3'; }, 520);
+    addEventListener('pageshow', e => { if (e.persisted) f.remove(); }, { once:true });
+  }
+  function act(a) {
+    if (a.url) return;                        // external links open from the click handler (a trusted tap)
+    if (a.game) { enterGame(); return; }
+    if (a.v) openVideo(a.v);
+    else if (a.pdf) openPdf(a.pdf);
+    else if (a.room) toRoom(a.room);
+    else if (a.home) home();
+  }
+
+  // ---------- input: drag to move, pinch / ctrl+wheel to zoom, wheel to scroll ----------
+  const pts = new Map(); let start = null, moved = 0, pinch = null, lastTap = 0, tapped = null;
+  const toWorldPt = (px, py) => ({ x: cam.x + px / cam.s, y: cam.y + py / cam.s });
+  function zoomAt(px, py, f) {
+    const p = toWorldPt(px, py), s = clampS(cam.s * f);
+    cam.s = s; cam.x = p.x - px / s; cam.y = p.y - py / s; apply();
+  }
+  svg.addEventListener('pointerdown', e => {
+    svg.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    cancelAnimationFrame(raf);
+    if (pts.size === 1) { start = { x:e.clientX, y:e.clientY, cx:cam.x, cy:cam.y, target:e.target.closest('[data-act]') }; moved = 0; }
+    if (pts.size === 2) { const [a,b] = [...pts.values()]; pinch = { d:Math.hypot(a.x-b.x, a.y-b.y), s:cam.s }; start = null; }
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if (pts.size === 2 && pinch) {
+      const [a,b] = [...pts.values()];
+      zoomAt((a.x+b.x)/2, (a.y+b.y)/2, (pinch.s * Math.hypot(a.x-b.x, a.y-b.y) / pinch.d) / cam.s);
+      return;
+    }
+    if (start) {
+      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      moved = Math.max(moved, Math.hypot(dx, dy));
+      if (moved > 6) { svg.classList.add('drag'); cam.x = start.cx - dx / cam.s; cam.y = start.cy - dy / cam.s; apply(); }
+    }
+  });
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0) {
+      svg.classList.remove('drag');
+      if (start && moved <= 6) {
+        if (start.target) { tapped = start.target; act(JSON.parse(start.target.dataset.act)); }
+        else { const now = Date.now(); if (now - lastTap < 320) toRoom('start'); lastTap = now; }  // double-tap the blue = back to start
+      }
+      start = null;
+    }
+  };
+  svg.addEventListener('click', () => {
+    const el = tapped; if (!el) return;   // pointer capture can retarget click, so use what was tapped
+    tapped = null;
+    const a = JSON.parse(el.dataset.act); if (a.url) openUrl(a.url);
+  });
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+  svg.addEventListener('wheel', e => {
+    e.preventDefault(); cancelAnimationFrame(raf);
+    if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.01));
+    else { const k = e.deltaMode === 1 ? 32 : 1; cam.x += e.deltaX * k / cam.s; cam.y += e.deltaY * k / cam.s; apply(); }
+  }, { passive:false });
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (!closeVideo()) toRoom('start'); return; }
+    if (player.classList.contains('on')) {
+      if (e.key === 'ArrowRight') step(1);
+      if (e.key === 'ArrowLeft') step(-1);
+      return;
+    }
+    const a = document.activeElement?.dataset?.act;
+    if ((e.key === 'Enter' || e.key === ' ') && a) { e.preventDefault(); const o = JSON.parse(a); o.url ? openUrl(o.url) : act(o); }
+  });
+  let rz = 0;
+  addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => here ? toRoom(here, false) : go(worldView(), false), 120); });
+
+
+  // ---------- start ----------
+  let booted = false;
+  function boot() {
+    if (booted) return; booted = true; measureRooms(); toRoom('start', false);
+  }
+  apply();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
+  setTimeout(boot, 1500);
+})();
+</script>
+
+
+</body>
+</html>
