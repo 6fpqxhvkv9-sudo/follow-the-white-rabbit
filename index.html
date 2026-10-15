@@ -33,6 +33,7 @@
   #eyes img { width:100%; height:auto; display:block; pointer-events:none; filter:drop-shadow(0 2px 6px rgba(0,0,40,.25)); transition:transform .2s; }
   @media (hover:hover) { #eyes:hover img { transform:scale(1.06); } }
   #eyes:focus-visible { outline:2px solid #fff; outline-offset:2px; }
+  #eyes { transition:opacity .3s; } #eyes.hide { opacity:0; pointer-events:none; }
 
   /* video window */
   #player { position:fixed; inset:0; z-index:20; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(0,10,80,.35); }
@@ -141,7 +142,6 @@
 <text id="-&gt;CV" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5561" y="4421.27">&#x2192;CV&#10;</tspan></text>
 <text id="-&gt;youtube_2" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4949" y="4972.27">&#x2192;youtube</tspan></text>
 <text id="-&gt;Work" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5023" y="4243.27">&#x2192;Work&#10;</tspan></text>
-<text id="-&gt;world" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4996" y="3265.27">&#x2192;world&#10;</tspan></text>
 <text id="-&gt;insta" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5694" y="3490.27">&#x2192;insta</tspan></text>
 <text id="-&gt;press kit" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4863" y="3831.27">&#x2192;press kit</tspan></text>
 <text id="-&gt;conix" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="4923" y="4591.27">&#x2192;conix</tspan></text>
@@ -151,7 +151,6 @@
 <rect id="-&gt;contact_2" x="5329" y="4622" width="613" height="410" fill="url(#pattern18_4002_637)"/>
 <rect id="-&gt;conix" x="4863" y="4365" width="207" height="182" fill="url(#pattern19_4002_637)"/>
 <rect id="qqfe9 2_2" x="4419" y="3348" width="981" height="410" fill="url(#pattern20_4002_637)"/>
-<text id="-&gt;mini game" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="20" letter-spacing="0em"><tspan x="5329" y="3815.27">&#x2192;mini game</tspan></text>
 </g>
 <g id="cv">
 <text id="Follow the white rabbit" fill="white" style="white-space: pre" xml:space="preserve" font-family="Inter" font-size="79" font-weight="200" letter-spacing="0em"><tspan x="6915" y="1994.73">Follow the white rabbit</tspan></text>
@@ -582,7 +581,16 @@
       });
       const cx = (x0 + x1) / 2, w = Math.max(1080, x1 - x0 + 40);
       rooms[id] = { x: cx - w/2, y: y0 - 110, w, h: Math.max(1920, y1 - y0 + 180) };
-      if (id === 'start') { const c = wb(document.getElementById('start_cony')); if (c) rooms[id].anchor = c.x + c.width / 2; }
+      if (id === 'start') {
+        const $ = k => wb(document.getElementById(k));
+        const c = $('start_cony'); if (c) rooms[id].anchor = c.x + c.width / 2;
+        // phone framing: from the eyes down to the crow / youtube, centred between the red ring and the heart
+        const eyes = $('->start_2'), crow = $('->contact_2'), yt = $('->cony youtube'), ring = $('->conix'), heart = $('->insta');
+        if (eyes && crow && yt && ring && heart) {
+          const top = eyes.y - 60, bottom = Math.max(crow.y + crow.height, yt.y + yt.height + 60) + 20;
+          rooms[id].phone = { y: top, h: bottom - top, cx: (ring.x + heart.x + heart.width) / 2 };
+        }
+      }
     });
   }
 
@@ -595,6 +603,10 @@
 
   function roomView(id) {
     const r = rooms[id]; const pad = 1.04;
+    if (id === 'start' && r.phone && vw() / vh() < 0.8) { // phone: eyes at the top, crow + youtube at the bottom
+      const f = r.phone, s = vh() / f.h;
+      return { x: f.cx - vw()/s/2, y: f.y, s };
+    }
     if (id === 'start' && r.anchor != null) {           // keep CONY in the middle of the screen
       const half = Math.max(r.anchor - r.x, r.x + r.w - r.anchor);
       const s = Math.min(vw() / (2 * half * pad), vh() / 1920);
@@ -615,7 +627,13 @@
 
   let raf = 0, here = 'start';
   const eyes = document.getElementById('eyes');
-  const setHere = h => { here = h; eyes.setAttribute('aria-label', h === 'start' ? 'See the whole world' : 'Back to start'); };
+  const setHere = h => {
+    here = h; eyes.setAttribute('aria-label', h === 'start' ? 'See the whole world' : 'Back to start');
+    // on the first screen the map's own eyes do this job; bring the button back a beat later
+    // so the same tap can't land on it as it reappears under the finger
+    if (h === 'start') eyes.classList.add('hide');
+    else setTimeout(() => { if (here !== 'start') eyes.classList.remove('hide'); }, 450);
+  };
   function go(t, anim = true) {
     cancelAnimationFrame(raf);
     if (!anim || matchMedia('(prefers-reduced-motion: reduce)').matches) { Object.assign(cam, t); apply(); return; }
