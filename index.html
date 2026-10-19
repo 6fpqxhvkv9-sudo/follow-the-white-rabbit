@@ -662,7 +662,7 @@
         const eyes = $('->start_2'), crow = $('->contact_2'), yt = $('->cony youtube'), ring = $('->conix'), heart = $('->insta');
         if (eyes && crow && yt && ring && heart) {
           const top = eyes.y - 60, bottom = Math.max(crow.y + crow.height, yt.y + yt.height + 60) + 20;
-          rooms[id].phone = { y: top, h: bottom - top, cx: (ring.x + heart.x + heart.width) / 2 };
+          rooms[id].phone = { y: top, h: bottom - top, cx: (ring.x + heart.x + heart.width) / 2, ex: eyes.x };
         }
       }
     });
@@ -678,9 +678,11 @@
   function roomView(id) {
     const r = rooms[id]; const pad = 1.04;
     if (id === 'start' && r.phone && vw() / vh() < 0.8) { // phone: eyes at the top, crow + youtube at the bottom
-      // fit eyes-to-crow in height, but never wider than the room so nothing on the sides gets cut
-      const f = r.phone, s = Math.min(vh() / f.h, vw() / (r.w * 1.02));
-      return { x: r.x + r.w/2 - vw()/s/2, y: f.y + f.h/2 - vh()/s/2, s };
+      // the framing Cony picked on his phone: ~1194 units across, starting just left of the eyes
+      // (bird and crow may run off the edges); shrink only if the screen is too short for eyes-to-crow
+      const f = r.phone, W = 1194, cx = f.ex - 67 + W / 2;
+      const s = Math.min(vw() / W, vh() / f.h);
+      return { x: cx - vw()/s/2, y: f.y + f.h/2 - vh()/s/2, s };
     }
     if (id === 'start' && r.anchor != null) {           // keep CONY in the middle of the screen
       const half = Math.max(r.anchor - r.x, r.x + r.w - r.anchor);
